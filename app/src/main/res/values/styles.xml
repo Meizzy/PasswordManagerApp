@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="TextInputStyle" parent="Widget.Material3.TextInputEditText.FilledBox">
+        <item name="colorControlNormal">?colorOutline</item>
+        <item name="colorControlActivated">?colorTertiary</item>
+        <item name="colorControlHighlight">?colorTertiary</item>
+        <item name="android:textColorHint">?colorOutline</item>
+        <item name="hintTextColor">?colorOutline</item>
+        <item name="colorAccent">?colorOutline</item>
+    </style>
+
+    <style name="Theme.PasswordManager.Rounded.Half" parent="Theme.PasswordManager">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+</resources>

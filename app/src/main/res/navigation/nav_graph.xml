@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph.xml"
+    app:startDestination="@id/masterPasswordFragment">
+
+    <fragment
+        android:id="@+id/masterPasswordFragment"
+        android:name="com.burujiyaseer.passwordmanager.ui.master_password.MasterPasswordFragment"
+        android:label="MasterPasswordFragment"
+        tools:layout="@layout/fragment_master_password" >
+    </fragment>
+
+    <fragment
+        android:id="@+id/viewPasswordsFragment"
+        android:name="com.burujiyaseer.passwordmanager.ui.view_password_manager.ViewPasswordsFragment"
+        android:label="ViewPasswordsFragment"
+        tools:layout="@layout/fragment_view_password_manager" />
+
+    <fragment
+        android:id="@+id/addOrEditPasswordFragment"
+        android:name="com.burujiyaseer.passwordmanager.ui.add_edit_password_manager.AddOrEditPasswordManagerFragment"
+        android:label="AddOrEditPasswordFragment"
+        tools:layout="@layout/fragment_add_or_edit_password">
+        <argument
+            android:name="password_entry_id"
+            app:argType="string" />
+    </fragment>
+
+
+</navigation>

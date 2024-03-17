@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name" translatable="false">PasswordManager</string>
+    <string name="title_hint">Title*</string>
+    <string name="account_hint">Account</string>
+    <string name="username_hint">Username</string>
+    <string name="description_hint">Description</string>
+    <string name="password_hint">Password*</string>
+    <string name="required_helper_text">*required</string>
+    <string name="master_password_hint">Master password</string>
+    <string name="website_hint">Website*</string>
+    <string name="save">Save</string>
+    <string name="more">More</string>
+    <string name="edit">Edit</string>
+    <string name="add">Add</string>
+    <string name="add_new_password">Add new password</string>
+    <string name="done">Done</string>
+    <string name="welcome_title">Welcome to the Password Manager App!</string>
+    <string name="first_time_dialog_message">Welcome to our secure platform! Setting up your master password is crucial. This password is your key to accessing all your valuable information. Remember, once set, your master password can never be changed or edited. Please choose wisely and ensure you keep it safe and secure. If you have any questions, feel free to reach out to us. Happy securing!</string>
+    <string name="biometric_error">Unable to authenticate user due to %s</string>
+    <string name="biometric_or_screen_lock_message">Use screen lock or biometrics</string>
+    <string name="weak_helper_text">Oops! Try to enter a longer, mixed with letters and digits and special characters password</string>
+    <string name="strong_helper_text">Amazing password!</string>
+    <string name="okay_helper_text">Surely, you can do better!! try different cases and special characters</string>
+    <string name="view_password_title">Password Manager</string>
+    <string name="warning_dialog_title">Warning</string>
+    <string name="delete_alert">Do you really want to irrevocably delete this password?</string>
+    <string name="leave_alert">Do you really want to leave this screen? your saved progress will be lost</string>
+    <string name="search">Search</string>
+    <string name="no_search_results">No matches found! try another title keyword</string>
+    <string name="empty_password_entries">Create your first password!</string>
+</resources>

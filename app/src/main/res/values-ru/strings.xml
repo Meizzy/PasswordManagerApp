@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="title_hint">Заголовок*</string>
+    <string name="account_hint">Аккаунт</string>
+    <string name="username_hint">Имя пользователя</string>
+    <string name="description_hint">Описание</string>
+    <string name="password_hint">Пароль*</string>
+    <string name="required_helper_text">*обязательно</string>
+    <string name="master_password_hint">Мастер пароль</string>
+    <string name="website_hint">Веб-сайт*</string>
+    <string name="save">Сохранить</string>
+    <string name="more">Еще</string>
+    <string name="edit">Редактировать</string>
+    <string name="add">Добавить</string>
+    <string name="add_new_password">Добавить новый пароль</string>
+    <string name="done">Готово</string>
+    <string name="welcome_title">Добро пожаловать в приложение Менеджер паролей!</string>
+    <string name="first_time_dialog_message">Добро пожаловать на нашу безопасную платформу! Установка вашего мастер-пароля крайне важна. Этот пароль - ваш ключ к доступу ко всей вашей ценной информации. Помните, что установив его однажды, вы не сможете изменить или отредактировать его. Пожалуйста, выбирайте внимательно и обязательно храните его в безопасности. Если у вас возникнут вопросы, не стесняйтесь обратиться к нам. Безопасности вам!</string>
+    <string name="biometric_error">ошибка при авторизации %s</string>
+    <string name="biometric_or_screen_lock_message">Используйте опечаток пальца или биометрические данные</string>
+    <string name="weak_helper_text">Упс! Попробуйте ввести более длинный пароль, состоящий из букв, цифр и специальных символов</string>
+    <string name="strong_helper_text">Замечательный пароль!</string>
+    <string name="okay_helper_text">Окей, вы можете сделать лучше!! попробуйте использовать сочетание строчных и прописных букв и специальных символов</string>
+    <string name="view_password_title">Менеджер паролей</string>
+    <string name="warning_dialog_title">Внимание</string>
+    <string name="delete_alert">Вы действительно хотите безвозвратно удалить этот пароль?</string>
+    <string name="leave_alert">Вы действительно хотите покинуть этот экран? ваши данные не будут сохранены</string>
+    <string name="search">Поиск</string>
+    <string name="no_search_results">Совпадений не найдено! попробуйте другое слово в заголовке</string>
+    <string name="empty_password_entries">Создайте свой первый пароль!</string>
+</resources>
