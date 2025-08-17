@@ -4,6 +4,7 @@ import com.burujiyaseer.passwordmanager.domain.model.PasswordStrength
 
 sealed interface MasterPasswordUIAction {
     data class ValidatePassword(val isCorrect: Boolean): MasterPasswordUIAction
+    data object IsFirstTime: MasterPasswordUIAction
     data class PasswordStrengthResult(val passwordStrength: PasswordStrength): MasterPasswordUIAction
 
 }

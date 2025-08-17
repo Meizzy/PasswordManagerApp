@@ -2,6 +2,8 @@ package com.burujiyaseer.passwordmanager.di
 
 import com.burujiyaseer.passwordmanager.domain.usecase.check_password_strength.CheckPasswordStrength
 import com.burujiyaseer.passwordmanager.domain.usecase.check_password_strength.DefaultCheckPasswordStrength
+import com.burujiyaseer.passwordmanager.domain.usecase.clear_saved_password.ClearSavedMasterPassword
+import com.burujiyaseer.passwordmanager.domain.usecase.clear_saved_password.DefaultClearSavedMasterPassword
 import com.burujiyaseer.passwordmanager.domain.usecase.delete_password_manager_entry.DefaultDeletePasswordManagerEntry
 import com.burujiyaseer.passwordmanager.domain.usecase.delete_password_manager_entry.DeletePasswordManagerEntry
 import com.burujiyaseer.passwordmanager.domain.usecase.encrypt_decrypt_password.DefaultEncryptDecryptPassword
@@ -52,6 +54,9 @@ interface DomainModule {
 
     @Binds
     fun bindSaveMasterPassword(useCase: DefaultSaveMasterPassword): SaveMasterPassword
+
+    @Binds
+    fun bindClearSavedMasterPassword(useCase: DefaultClearSavedMasterPassword): ClearSavedMasterPassword
 
     @Binds
     fun bindCheckPasswordStrength(useCase: DefaultCheckPasswordStrength): CheckPasswordStrength

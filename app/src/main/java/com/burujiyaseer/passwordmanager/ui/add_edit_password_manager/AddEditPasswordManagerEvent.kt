@@ -12,4 +12,5 @@ sealed interface AddEditPasswordManagerEvent {
     data object PositiveDeletePasswordEntry : AddEditPasswordManagerEvent
     data object LeavePasswordEntryClicked : AddEditPasswordManagerEvent
     data object PositiveLeavePasswordEntry : AddEditPasswordManagerEvent
+    data object NegativeLeavePasswordEntry : AddEditPasswordManagerEvent
 }

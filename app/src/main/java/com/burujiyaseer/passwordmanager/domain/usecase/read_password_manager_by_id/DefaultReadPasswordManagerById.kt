@@ -3,9 +3,8 @@ package com.burujiyaseer.passwordmanager.domain.usecase.read_password_manager_by
 import com.burujiyaseer.passwordmanager.domain.model.PasswordManagerModel
 import com.burujiyaseer.passwordmanager.domain.repository.PasswordManagerRepository
 import com.burujiyaseer.passwordmanager.domain.usecase.encrypt_decrypt_password.EncryptDecryptPassword
+import com.burujiyaseer.passwordmanager.ui.util.Constants.EMPTY_STRING
 import javax.inject.Inject
-
-private const val EMPTY_STRING = ""
 
 class DefaultReadPasswordManagerById @Inject constructor(
     private val repository: PasswordManagerRepository,

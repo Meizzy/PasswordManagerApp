@@ -32,6 +32,12 @@ class DefaultPreferencesDataSource @Inject constructor(
         preferences[MASTER_PASSWORD_KEY]
     }
 
+    override suspend fun clearSavedMasterPassword() {
+        dataStore.edit { preferences ->
+            preferences.remove(MASTER_PASSWORD_KEY)
+        }
+    }
+
     private companion object {
         val MASTER_PASSWORD_KEY = stringPreferencesKey("master_password")
     }

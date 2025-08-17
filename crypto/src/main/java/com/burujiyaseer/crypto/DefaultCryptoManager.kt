@@ -23,9 +23,9 @@ class DefaultCryptoManager(private val isAuthenticationRequired: Boolean) : Cryp
             init(Cipher.ENCRYPT_MODE, getKey())
         }
 
-    private fun getDecryptCipherForIv(iv: ByteArray): Cipher =
+    private fun getDecryptCipherForIv(byteArray: ByteArray): Cipher =
         Cipher.getInstance(TRANSFORMATION).apply {
-            init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
+            init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(byteArray))
         }
 
     private fun getKey(): SecretKey {
