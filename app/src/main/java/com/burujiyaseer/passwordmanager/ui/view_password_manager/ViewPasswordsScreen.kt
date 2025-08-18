@@ -10,12 +10,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -36,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -59,7 +66,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
-@Preview
+@Preview(showSystemUi = true)
 @Composable
 fun ViewPasswordPreview() {
     ViewPasswordsScreen(
@@ -99,16 +106,6 @@ fun ViewPasswordsScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(stringResource(R.string.view_password_title))
-                },
-                actions = {
-                    IconButton({ onSearchClick }) {
-                        Icon(Icons.Rounded.Search, stringResource(R.string.search))
-                    }
-                }
-            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -125,82 +122,111 @@ fun ViewPasswordsScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 expanded = extendedFab,
                 modifier = Modifier
-                    .padding(32.dp)
+//                    .padding(32.dp)
             )
         },
         floatingActionButtonPosition = FabPosition.End,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+//        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { padding ->
-        when (value) {
-            ViewPasswordUIAction.ShowEmptyListPrompt -> EmptyText(textId = R.string.no_search_results)
-            ViewPasswordUIAction.ShowEmptySearchResults -> EmptyText(textId = R.string.empty_password_entries)
-            is ViewPasswordUIAction.SubmitData -> LazyColumn(
-                modifier = Modifier
-                    .consumeWindowInsets(padding)
-                ,
-                contentPadding = padding,
-                state = listState
-            ) {
-//                val newList = List(value.filteredQueries.size * 1000) {
-//                    value.filteredQueries.first().copy(title = "$it - title", favIconUrl = "")
-//                }
-                items(value.filteredQueries) { passwordModel ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(10.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Row(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Horizontal,
+                    ),
+                ),
+        ) {
+            TopAppBar(
+                title = {
+                    Text(stringResource(R.string.view_password_title))
+                },
+                actions = {
+                    IconButton({ onSearchClick }) {
+                        Icon(Icons.Rounded.Search, stringResource(R.string.search))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                )
+            )
+            when (value) {
+                ViewPasswordUIAction.ShowEmptyListPrompt -> EmptyText(
+                    textId = R.string.no_search_results
+                )
+
+                ViewPasswordUIAction.ShowEmptySearchResults -> EmptyText(
+                    textId = R.string.empty_password_entries
+                )
+
+                is ViewPasswordUIAction.SubmitData -> LazyColumn(
+                    state = listState
+                ) {
+                    val newList = List(value.filteredQueries.size * 1000) {
+                        value.filteredQueries.first().copy(title = "$it - title", favIconUrl = "")
+                    }
+                    items(newList) { passwordModel ->
+                        Card(
                             modifier = Modifier
-                            .padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
-                            AvatarImageFromFile(
-                                filePath = passwordModel.favIconUrl,
-                                title = passwordModel.title
-                            )
-                            Spacer(
-                                modifier = Modifier.width(14.dp)
-                            )
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.SpaceAround
+                            Row(
+                                modifier = Modifier
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = passwordModel.title,
-                                    overflow = TextOverflow.Ellipsis,
-                                    maxLines = 1,
-                                    style = MaterialTheme.typography.bodyLarge
+                                AvatarImageFromFile(
+                                    filePath = passwordModel.favIconUrl,
+                                    title = passwordModel.title
                                 )
-                                Text(
-                                    text = passwordModel.account,
-                                    overflow = TextOverflow.Ellipsis,
-                                    maxLines = 1,
-                                    style = MaterialTheme.typography.bodyMedium
+                                Spacer(
+                                    modifier = Modifier.width(14.dp)
                                 )
-                            }
-                            IconButton(
-                                onClick = {
-                                    onAddFabClick?.invoke(passwordModel.entryId)
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.SpaceAround
+                                ) {
+                                    Text(
+                                        text = passwordModel.title,
+                                        overflow = TextOverflow.Ellipsis,
+                                        maxLines = 1,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        text = passwordModel.account,
+                                        overflow = TextOverflow.Ellipsis,
+                                        maxLines = 1,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Edit,
-                                    contentDescription = stringResource(R.string.edit),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                IconButton(
+                                    onClick = {
+                                        onAddFabClick?.invoke(passwordModel.entryId)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Edit,
+                                        contentDescription = stringResource(R.string.edit),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
                 }
+
+                null -> Unit
             }
 
-            null -> Unit
         }
-
     }
 }
 
