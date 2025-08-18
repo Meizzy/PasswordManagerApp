@@ -7,15 +7,12 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.LocalAbsoluteTonalElevation
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -29,9 +26,6 @@ import com.burujiyaseer.passwordmanager.ui.ui.navigation.NavigationRoot
 import com.burujiyaseer.passwordmanager.ui.ui.theme.PasswordManagerTheme
 import com.burujiyaseer.passwordmanager.ui.util.isSystemInDarkTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
@@ -44,16 +38,10 @@ class ComposeActivity : FragmentActivity() {
 
         var darkTheme by mutableStateOf(resources.configuration.isSystemInDarkTheme)
 
-        // Update the uiState
+        // Update the theme
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                isSystemInDarkTheme()
-                    .combine(flow {
-                        while (true) {
-                            emit(!darkTheme)
-                            delay(5_000)
-                        }
-                    }, Boolean::and).onEach { darkTheme = it }
+                isSystemInDarkTheme().onEach { darkTheme = it }
                     .collect { darkTheme ->
                         enableEdgeToEdge(
                             statusBarStyle = SystemBarStyle.auto(
@@ -114,10 +102,10 @@ fun AppBackground(
  * The default light scrim, as defined by androidx and the platform:
  * https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:activity/activity/src/main/java/androidx/activity/EdgeToEdge.kt;l=35-38;drc=27e7d52e8604a080133e8b842db10c89b4482598
  */
-private val lightScrim = android.graphics.Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
+private val lightScrim = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
 
 /**
  * The default dark scrim, as defined by androidx and the platform:
  * https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:activity/activity/src/main/java/androidx/activity/EdgeToEdge.kt;l=40-44;drc=27e7d52e8604a080133e8b842db10c89b4482598
  */
-private val darkScrim = android.graphics.Color.argb(0x80, 0x1b, 0x1b, 0x1b)
+private val darkScrim = Color.argb(0x80, 0x1b, 0x1b, 0x1b)

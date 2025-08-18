@@ -106,6 +106,19 @@ fun ViewPasswordsScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
+            TopAppBar(
+                title = {
+                    Text(stringResource(R.string.view_password_title))
+                },
+                actions = {
+                    IconButton({ onSearchClick }) {
+                        Icon(Icons.Rounded.Search, stringResource(R.string.search))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                )
+            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -121,14 +134,12 @@ fun ViewPasswordsScreen(
                 onClick = { onAddFabClick?.invoke(null) },
                 containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 expanded = extendedFab,
-                modifier = Modifier
-//                    .padding(32.dp)
+                modifier = Modifier.systemBarsPadding()
             )
         },
         floatingActionButtonPosition = FabPosition.End,
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
-//        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { padding ->
         Column(
@@ -142,19 +153,6 @@ fun ViewPasswordsScreen(
                     ),
                 ),
         ) {
-            TopAppBar(
-                title = {
-                    Text(stringResource(R.string.view_password_title))
-                },
-                actions = {
-                    IconButton({ onSearchClick }) {
-                        Icon(Icons.Rounded.Search, stringResource(R.string.search))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                )
-            )
             when (value) {
                 ViewPasswordUIAction.ShowEmptyListPrompt -> EmptyText(
                     textId = R.string.no_search_results

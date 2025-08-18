@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,9 +63,9 @@ fun AddOrEditPasswordScreen(
     popScreen: () -> Unit
 ) {
     val passwordState by viewModel.currentPasswordUIState.collectAsStateWithLifecycle()
-//    Spacer(Modifier.windowInsetsTopHeight(WindowInsets.safeDrawing))
     Scaffold(
-        modifier = modifier,
+        modifier = modifier
+            .imePadding(),
         topBar = {
             TopAppBar(
                 title = {
@@ -81,10 +82,14 @@ fun AddOrEditPasswordScreen(
                             contentDescription = "back"
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                )
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
         Column(
@@ -96,7 +101,7 @@ fun AddOrEditPasswordScreen(
                     WindowInsets.safeDrawing.only(
                         WindowInsetsSides.Horizontal
                     ),
-                ).verticalScroll(rememberScrollState()).imePadding(),
+                ).verticalScroll(rememberScrollState()),
         ) {
 
             var loadingState by remember { mutableStateOf(false) }
@@ -197,6 +202,7 @@ fun AddOrEditPasswordScreen(
             Button(
                 enabled = doneButtonState.isEnabled,
                 modifier = Modifier
+                    .systemBarsPadding()
                     .padding(horizontal = 64.dp, vertical = 32.dp)
                     .fillMaxWidth(),
                 onClick = {
