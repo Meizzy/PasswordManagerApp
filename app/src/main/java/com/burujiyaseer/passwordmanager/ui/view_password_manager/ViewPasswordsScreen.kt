@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -29,8 +28,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,15 +41,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SearchBarDefaults.InputField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +60,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -97,28 +103,72 @@ fun ViewPasswordPreview() {
 @Composable
 fun ViewPasswordsScreen(
     modifier: Modifier = Modifier,
-    onSearchClick: (() -> Unit)? = null,
+    onSearchClick: ((String) -> Unit)? = null,
     onAddFabClick: ((String?) -> Unit)? = null,
+//    onRemoveSuggestion: ((String?) -> Unit)? = null,
     value: ViewPasswordUIAction? = ViewPasswordUIAction.ShowEmptyListPrompt
 ) {
     val listState = rememberLazyListState()
     val extendedFab by remember { derivedStateOf { !listState.isScrollInProgress } }
+    var text by rememberSaveable { mutableStateOf("") }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.semantics { isTraversalGroup = true },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(stringResource(R.string.view_password_title))
+            SearchBar(
+                modifier = Modifier
+                    .semantics { traversalIndex = 0f }
+                    .padding(16.dp),
+                inputField = {
+                    InputField(
+                        query = text,
+                        onQueryChange = {
+                            text = it
+                            onSearchClick?.invoke(it)
+                        },
+                        onSearch = { expanded = false },
+                        expanded = expanded,
+                        onExpandedChange = { expanded = it },
+                        placeholder = { Text(stringResource(R.string.search)) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (expanded)
+                                IconButton(
+                                    onClick = {
+                                        text = ""
+                                        onSearchClick?.invoke("")
+                                        expanded = false
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = null
+                                    )
+                                }
+                        },
+                    )
                 },
-                actions = {
-                    IconButton({ onSearchClick }) {
-                        Icon(Icons.Rounded.Search, stringResource(R.string.search))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                colors = SearchBarDefaults.colors(
                     containerColor = Color.Transparent,
                 )
-            )
+            ) {
+//                LazyColumn {
+//                    items((value as ViewPasswordUIAction.SubmitData).filteredQueries) {
+//                        Row {
+//                            Text(it.title)
+//                            IconButton(
+//                                onRemoveSuggestion?.invoke(it.entryId)
+//                            ) {
+//                                Icon(
+//                                    imageVector = Icons.Default.Close,
+//                                    contentDescription = null)
+//                            }
+//                        }
+//                    }
+//                }
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -155,18 +205,18 @@ fun ViewPasswordsScreen(
         ) {
             when (value) {
                 ViewPasswordUIAction.ShowEmptyListPrompt -> EmptyText(
-                    textId = R.string.no_search_results
+                    textId = R.string.empty_password_entries
                 )
 
                 ViewPasswordUIAction.ShowEmptySearchResults -> EmptyText(
-                    textId = R.string.empty_password_entries
+                    textId = R.string.no_search_results
                 )
 
                 is ViewPasswordUIAction.SubmitData -> LazyColumn(
                     state = listState
                 ) {
-                    val newList = List(value.filteredQueries.size * 1000) {
-                        value.filteredQueries.first().copy(title = "$it - title", favIconUrl = "")
+                    val newList = List(value.filteredQueries.size * 10) {
+                        value.filteredQueries[it % value.filteredQueries.size]
                     }
                     items(newList) { passwordModel ->
                         Card(

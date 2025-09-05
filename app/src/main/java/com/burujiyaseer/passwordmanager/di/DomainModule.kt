@@ -16,12 +16,16 @@ import com.burujiyaseer.passwordmanager.domain.usecase.get_website_fav_icon_url.
 import com.burujiyaseer.passwordmanager.domain.usecase.get_website_fav_icon_url.SaveFavIconFromWebsiteUrl
 import com.burujiyaseer.passwordmanager.domain.usecase.insert_password_manager.DefaultInsertPasswordManager
 import com.burujiyaseer.passwordmanager.domain.usecase.insert_password_manager.InsertPasswordManager
+import com.burujiyaseer.passwordmanager.domain.usecase.read_ed_dialog.DefaultReadEdDialogState
+import com.burujiyaseer.passwordmanager.domain.usecase.read_ed_dialog.ReadEdDialogState
 import com.burujiyaseer.passwordmanager.domain.usecase.read_master_password.DefaultReadMasterPassword
 import com.burujiyaseer.passwordmanager.domain.usecase.read_master_password.ReadMasterPassword
 import com.burujiyaseer.passwordmanager.domain.usecase.read_password_manager_by_id.DefaultReadPasswordManagerById
 import com.burujiyaseer.passwordmanager.domain.usecase.read_password_manager_by_id.ReadPasswordManagerById
 import com.burujiyaseer.passwordmanager.domain.usecase.save_master_password.DefaultSaveMasterPassword
 import com.burujiyaseer.passwordmanager.domain.usecase.save_master_password.SaveMasterPassword
+import com.burujiyaseer.passwordmanager.domain.usecase.show_ed_dialog.DefaultSaveShownEdDialog
+import com.burujiyaseer.passwordmanager.domain.usecase.show_ed_dialog.SaveShownEdDialog
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -63,4 +67,10 @@ interface DomainModule {
 
     @Binds
     fun bindSaveFavIconWebsiteUrl(useCase: DefaultSaveFavIconFromWebsiteUrl): SaveFavIconFromWebsiteUrl
+
+    @Binds
+    fun bindReadEdDialogState(useCase: DefaultReadEdDialogState): ReadEdDialogState
+
+    @Binds
+    fun bindSaveEdDialogState(useCase: DefaultSaveShownEdDialog): SaveShownEdDialog
 }

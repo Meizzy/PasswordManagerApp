@@ -8,5 +8,5 @@ interface ReadPasswordManagerById {
      * read entry with [entryId], and simultaneously decrypt the password by
      * the saved [PasswordManagerModel.passwordFileName]
      */
-    suspend operator fun invoke(entryId: String): PasswordManagerModel?
+    operator fun invoke(entryId: String?): Flow<PasswordManagerModel?>
 }

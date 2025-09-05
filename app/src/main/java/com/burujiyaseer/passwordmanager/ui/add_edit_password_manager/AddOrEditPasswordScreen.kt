@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
@@ -39,9 +40,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +54,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.burujiyaseer.passwordmanager.R
 import com.burujiyaseer.passwordmanager.ui.util.utilLog
 
@@ -62,10 +64,10 @@ fun AddOrEditPasswordScreen(
     viewModel: AddOrEditPasswordManagerViewModel,
     popScreen: () -> Unit
 ) {
-    val passwordState by viewModel.currentPasswordUIState.collectAsStateWithLifecycle()
+    val passwordState by viewModel.currentPasswordUIState.collectAsState()
+    var dialogState by remember { mutableStateOf(DialogState.Dismiss) }
     Scaffold(
-        modifier = modifier
-            .imePadding(),
+        modifier = modifier.imePadding(),
         topBar = {
             TopAppBar(
                 title = {
@@ -74,13 +76,27 @@ fun AddOrEditPasswordScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            viewModel.onEvent(AddEditPasswordManagerEvent.LeavePasswordEntryClicked)
+                            dialogState = DialogState.Leave
                         }
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = "back"
                         )
+                    }
+                },
+                actions = {
+                    if (passwordState.addDeleteMenu) {
+                        IconButton(
+                            onClick = {
+                                dialogState = DialogState.Delete
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = stringResource(android.R.string.cancel)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -101,48 +117,27 @@ fun AddOrEditPasswordScreen(
                     WindowInsets.safeDrawing.only(
                         WindowInsetsSides.Horizontal
                     ),
-                ).verticalScroll(rememberScrollState()),
+                )
+                .verticalScroll(rememberScrollState()),
         ) {
 
             var loadingState by remember { mutableStateOf(false) }
-            val doneButtonState by viewModel.shouldEnableDoneButton.collectAsStateWithLifecycle()
-            val state = viewModel.uiActionFlow.collectAsStateWithLifecycle().value
+            val doneButtonState =
+                viewModel.shouldEnableDoneButton.collectAsState().value
+            val state = viewModel.uiActionFlow.collectAsState().value
             utilLog("passwordState: $passwordState")
             loadingState = state is AddEditPasswordManagerAction.ShowLoader
-            var dialogState by remember { mutableStateOf(DialogState.Dismiss) }
-            when (state) {
 
-                AddEditPasswordManagerAction.DismissDialog -> {
-                    dialogState = DialogState.Dismiss
-                }
-
-                AddEditPasswordManagerAction.NavigateBack -> {
-                    popScreen()
-                }
-
-                AddEditPasswordManagerAction.ShowConfirmDeleteDialog -> {
-                    dialogState = DialogState.Delete
-                }
-
-                AddEditPasswordManagerAction.ShowConfirmExitDialog -> {
-                    dialogState = DialogState.Leave
-                }
-
-                else -> Unit
+            if (state == AddEditPasswordManagerAction.NavigateBack) {
+                popScreen()
             }
             BuildDialog(
                 dialogState = dialogState,
-                onDismissClick = {
-                    dialogState = DialogState.Dismiss
-                    viewModel.onEvent(AddEditPasswordManagerEvent.NegativeLeavePasswordEntry)
-                },
+                onDismissClick = { dialogState = DialogState.Dismiss },
                 onConfirmClick = {
                     dialogState = DialogState.Dismiss
-                    viewModel.onEvent(
-                        event = if (it == DialogState.Delete)
-                            AddEditPasswordManagerEvent.PositiveDeletePasswordEntry
-                        else AddEditPasswordManagerEvent.PositiveLeavePasswordEntry
-                    )
+                    if (it == DialogState.Delete) viewModel.positiveDeletePasswordEntry()
+                    else popScreen()
                 }
             )
             TextField(
@@ -150,24 +145,21 @@ fun AddOrEditPasswordScreen(
                 isRequired = true,
                 labelTextId = R.string.title_hint,
                 iconId = R.drawable.ic_title,
-                onTextChanged = {
-                    viewModel.onEvent(AddEditPasswordManagerEvent.AddedTitle(it))
-                    passwordState.uiPasswordModel.title = it
-                }
+                onTextChanged = viewModel::updateTitle
             )
             TextField(
                 initialText = passwordState.uiPasswordModel.account,
                 isRequired = false,
                 labelTextId = R.string.account_hint,
                 iconId = R.drawable.ic_account_circle,
-                onTextChanged = { passwordState.uiPasswordModel.account = it }
+                onTextChanged = viewModel::updateAccount
             )
             TextField(
                 initialText = passwordState.uiPasswordModel.username,
                 isRequired = false,
                 labelTextId = R.string.username_hint,
                 iconId = R.drawable.ic_person,
-                onTextChanged = { passwordState.uiPasswordModel.username = it }
+                onTextChanged = viewModel::updateUsername
             )
             TextField(
                 initialText = passwordState.uiPasswordModel.password,
@@ -175,29 +167,21 @@ fun AddOrEditPasswordScreen(
                 isPassword = true,
                 labelTextId = R.string.password_hint,
                 iconId = R.drawable.ic_password,
-                onTextChanged = {
-                    viewModel.onEvent(AddEditPasswordManagerEvent.AddedPassword(it))
-                    passwordState.uiPasswordModel.password = it
-                }
+                onTextChanged = viewModel::updatePassword
             )
             TextField(
                 initialText = passwordState.uiPasswordModel.websiteUrl,
                 isRequired = true,
                 labelTextId = R.string.website_hint,
                 iconId = R.drawable.ic_website,
-                onTextChanged = {
-                    viewModel.onEvent(AddEditPasswordManagerEvent.AddedWebsite(it))
-                    passwordState.uiPasswordModel.websiteUrl = it
-                }
+                onTextChanged = viewModel::updateWebsite
             )
             TextField(
                 initialText = passwordState.uiPasswordModel.description,
                 isRequired = false,
                 labelTextId = R.string.description_hint,
                 iconId = R.drawable.ic_title,
-                onTextChanged = {
-                    passwordState.uiPasswordModel.description = it
-                }
+                onTextChanged = viewModel::updateDescription
             )
             Button(
                 enabled = doneButtonState.isEnabled,
@@ -206,23 +190,8 @@ fun AddOrEditPasswordScreen(
                     .padding(horizontal = 64.dp, vertical = 32.dp)
                     .fillMaxWidth(),
                 onClick = {
-                    viewModel.onEvent(
-                        AddEditPasswordManagerEvent.SavePasswordEntry(
-                            passwordState.uiPasswordModel.run {
-                                UIPasswordModel(
-                                    entryId = entryId,
-                                    title = title,
-                                    account = account,
-                                    username = username,
-                                    password = password,
-                                    websiteUrl = websiteUrl,
-                                    description = description
-                                )
-                            }
-                        )
-                    )
-                }
-            ) {
+                    viewModel.savePasswordEntry()
+                }) {
                 Text(
                     text = stringResource(R.string.done)
                 )
@@ -305,7 +274,7 @@ fun TextField(
     iconId: Int,
     onTextChanged: (String) -> Unit
 ) {
-    var text by remember(initialText) {
+    var text by rememberSaveable(initialText) {
         //trigger on initial
         onTextChanged(initialText)
         mutableStateOf(initialText)

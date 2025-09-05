@@ -10,20 +10,20 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import com.burujiyaseer.passwordmanager.R
 import com.burujiyaseer.passwordmanager.ui.util.utilLog
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 
 private const val VALID_AUTHENTICATORS =
     BiometricManager.Authenticators.DEVICE_CREDENTIAL or BiometricManager.Authenticators.BIOMETRIC_WEAK
 
 class BiometricAuthHelperImpl : BiometricAuthHelper {
 
-    override suspend fun authenticate(
+    override fun authenticate(
         fragment: Fragment,
-    ): BiometricResult = suspendCoroutine { continuation ->
+    ): Flow<BiometricResult> = callbackFlow {
         val activity = fragment.requireActivity()
-        val authCallback = createPromptAuthenticationCallback(continuation)
+        val authCallback = createPromptAuthenticationCallback(channel)
         val deviceHasKeyguard =
             activity.getSystemService<KeyguardManager>()?.isDeviceSecure == true
         if (canAuthenticate(fragment.requireContext()) || deviceHasKeyguard) {
@@ -39,14 +39,14 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
             )
                 .authenticate(promptInfo)
         } else {
-            continuation.resume(BiometricResult.HardwareUnavailableOrDisabled)
+            channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
         }
     }
 
-    override suspend fun authenticate(
+    override fun authenticate(
         activity: FragmentActivity
-    ): BiometricResult = suspendCoroutine { continuation ->
-        val authCallback = createPromptAuthenticationCallback(continuation)
+    ): Flow<BiometricResult> = callbackFlow {
+        val authCallback = createPromptAuthenticationCallback(channel)
         val deviceHasKeyguard =
             activity.getSystemService<KeyguardManager>()?.isDeviceSecure == true
         if (canAuthenticate(activity) || deviceHasKeyguard) {
@@ -62,12 +62,12 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
             )
                 .authenticate(promptInfo)
         } else {
-            continuation.resume(BiometricResult.HardwareUnavailableOrDisabled)
+            channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
         }
     }
 
     private fun createPromptAuthenticationCallback(
-        continuation: Continuation<BiometricResult>,
+        channel: SendChannel<BiometricResult>,
     ): BiometricPrompt.AuthenticationCallback {
         return object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -75,10 +75,10 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
                 utilLog("onAuthError: $errString")
                 when (errorCode) {
                     /** Keep in sync with [androidx.biometric.BiometricPrompt.AuthenticationError] */
-                    BiometricPrompt.ERROR_HW_UNAVAILABLE -> continuation.resume(BiometricResult.HardwareUnavailableOrDisabled)
-                    BiometricPrompt.ERROR_UNABLE_TO_PROCESS -> continuation.resume(BiometricResult.Retry)
+                    BiometricPrompt.ERROR_HW_UNAVAILABLE -> channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
+                    BiometricPrompt.ERROR_UNABLE_TO_PROCESS -> channel.trySend(BiometricResult.Retry)
                     BiometricPrompt.ERROR_TIMEOUT ->
-                        continuation.resume(
+                        channel.trySend(
                             BiometricResult.Failure(
                                 errorCode,
                                 errString
@@ -86,16 +86,16 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
                         )
 
                     BiometricPrompt.ERROR_NO_SPACE ->
-                        continuation.resume(
+                        channel.trySend(
                             BiometricResult.Failure(
                                 errorCode,
                                 errString
                             )
                         )
 
-                    BiometricPrompt.ERROR_CANCELED -> continuation.resume(BiometricResult.CanceledBySystem)
+                    BiometricPrompt.ERROR_CANCELED -> channel.trySend(BiometricResult.CanceledBySystem)
                     BiometricPrompt.ERROR_LOCKOUT ->
-                        continuation.resume(
+                        channel.trySend(
                             BiometricResult.Failure(
                                 errorCode,
                                 errString
@@ -103,7 +103,7 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
                         )
 
                     BiometricPrompt.ERROR_VENDOR ->
-                        continuation.resume(
+                        channel.trySend(
                             BiometricResult.Failure(
                                 errorCode,
                                 errString
@@ -111,23 +111,23 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
                         )
 
                     BiometricPrompt.ERROR_LOCKOUT_PERMANENT ->
-                        continuation.resume(
+                        channel.trySend(
                             BiometricResult.Failure(
                                 errorCode,
                                 errString
                             )
                         )
 
-                    BiometricPrompt.ERROR_USER_CANCELED -> continuation.resume(BiometricResult.CanceledByUser)
-                    BiometricPrompt.ERROR_NO_BIOMETRICS -> continuation.resume(BiometricResult.HardwareUnavailableOrDisabled)
-                    BiometricPrompt.ERROR_HW_NOT_PRESENT -> continuation.resume(BiometricResult.HardwareUnavailableOrDisabled)
-                    BiometricPrompt.ERROR_NEGATIVE_BUTTON -> continuation.resume(BiometricResult.CanceledByUser)
+                    BiometricPrompt.ERROR_USER_CANCELED -> channel.trySend(BiometricResult.CanceledByUser)
+                    BiometricPrompt.ERROR_NO_BIOMETRICS -> channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
+                    BiometricPrompt.ERROR_HW_NOT_PRESENT -> channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
+                    BiometricPrompt.ERROR_NEGATIVE_BUTTON -> channel.trySend(BiometricResult.CanceledByUser)
                     BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL ->
-                        continuation.resume(BiometricResult.HardwareUnavailableOrDisabled)
+                        channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
                     // We cover all guaranteed values above, but [errorCode] is still an Int
                     // at the end of the day so a catch-all else will always be required.
                     else -> {
-                        continuation.resume(
+                        channel.trySend(
                             BiometricResult.Failure(
                                 errorCode,
                                 errString
@@ -139,13 +139,13 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
 
             override fun onAuthenticationFailed() {
                 super.onAuthenticationFailed()
-                continuation.resume(BiometricResult.Retry)
+                channel.trySend(BiometricResult.Retry)
             }
 
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 super.onAuthenticationSucceeded(result)
                 utilLog("onAuthenticationSucceeded()")
-                continuation.resume(BiometricResult.Success(result.cryptoObject))
+                channel.trySend(BiometricResult.Success(result.cryptoObject))
             }
         }
     }

@@ -2,6 +2,7 @@ package com.burujiyaseer.passwordmanager.data.local.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.burujiyaseer.passwordmanager.di.coroutines.CoroutineDispatcherProvider
@@ -38,7 +39,22 @@ class DefaultPreferencesDataSource @Inject constructor(
         }
     }
 
+    override suspend fun saveEdDialogShownState() {
+        withContext(dispatcherProvider.io()) {
+            dataStore.edit { preferences ->
+                preferences[ED_SHOWN_KEY] = true
+            }
+        }
+    }
+
+    override fun readEdDialogShownState(): Flow<Boolean> {
+        return dataStore.data.map { preferences ->
+            preferences[ED_SHOWN_KEY] ?: false
+        }
+    }
+
     private companion object {
         val MASTER_PASSWORD_KEY = stringPreferencesKey("master_password")
+        val ED_SHOWN_KEY = booleanPreferencesKey("educational_dialog")
     }
 }

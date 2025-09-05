@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.burujiyaseer.passwordmanager.domain.usecase.get_all_password_manager_entries.GetAllPasswordManagerEntries
 import com.burujiyaseer.passwordmanager.ui.util.Constants.EMPTY_STRING
+import com.burujiyaseer.passwordmanager.ui.util.utilLog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ class ViewPasswordsViewModel @Inject constructor(
     val passwordEntriesUIState = getAllPasswordManagerEntries().combine(
         queryText.debounce(SEARCH_DELAY)
     ) { passwordManagerModels, query ->
+        utilLog("query: $query")
         val filteredQueries = if (query.isNotEmpty()) passwordManagerModels.filter { passwordManagerModel ->
             passwordManagerModel.title.contains(query, true)
         } else passwordManagerModels
@@ -35,7 +37,7 @@ class ViewPasswordsViewModel @Inject constructor(
     }
         .stateIn(
             viewModelScope,
-            SharingStarted.Eagerly,
+            SharingStarted.WhileSubscribed(5_000),
             null
         )
 

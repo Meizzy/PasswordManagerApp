@@ -16,16 +16,13 @@ import javax.inject.Inject
 
 private const val EMPTY_STRING = ""
 
-@Suppress("BlockingMethodInNonBlockingContext")
 class DefaultEncryptDecryptPassword @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val dispatcherProvider: CoroutineDispatcherProvider,
 ) : EncryptDecryptPassword {
 
     private val cryptoManager: CryptoManager by lazy {
-        DefaultCryptoManager(
-            appContext.getSystemService<KeyguardManager>()?.isDeviceSecure == true
-        )
+        DefaultCryptoManager()
     }
 
     override suspend fun encryptPassword(password: String, fileName: String): String =

@@ -24,11 +24,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +49,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.burujiyaseer.passwordmanager.R
 import com.burujiyaseer.passwordmanager.domain.model.PasswordStrength
+import com.burujiyaseer.passwordmanager.ui.util.DefaultLambda
 import com.burujiyaseer.passwordmanager.ui.util.biometric_auth.BiometricAuthHelper
 import com.burujiyaseer.passwordmanager.ui.util.biometric_auth.BiometricResult
 import com.burujiyaseer.passwordmanager.ui.util.utilLog
@@ -56,8 +59,12 @@ fun LoginScreen(
     modifier: Modifier,
     viewModel: MasterPasswordViewModel,
     biometricAuthHelper: BiometricAuthHelper,
-    goToNextScreen: () -> Unit,
+    goToNextScreen: DefaultLambda
 ) {
+    val hasShownEdDialog by viewModel.hasShownEdDialog.collectAsStateWithLifecycle()
+    if (!hasShownEdDialog) {
+        EducationalAuthDialog { utilLog("ed dialog dismissed") }
+    }
     val activity = LocalActivity.current as FragmentActivity
     Column(
         modifier
@@ -66,7 +73,7 @@ fun LoginScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val value: MasterPasswordUIAction by viewModel.masterPasswordUIState.collectAsStateWithLifecycle()
+        val value: MasterPasswordUIAction by viewModel.masterPasswordUIState.collectAsState()
         var showButtonText: Boolean? = null
         var passwordText by rememberSaveable {
             mutableStateOf("")
@@ -77,29 +84,6 @@ fun LoginScreen(
         val colorScheme = MaterialTheme.colorScheme
         var helperTextColor by remember {
             mutableStateOf(colorScheme.primary)
-        }
-
-        LaunchedEffect(true) {
-            biometricAuthHelper.authenticate(activity)
-                .also { biometricResult ->
-                    utilLog("authenticate: result: $biometricResult")
-                    when (biometricResult) {
-                        BiometricResult.CanceledBySystem,
-                        BiometricResult.CanceledByUser,
-                        BiometricResult.HardwareUnavailableOrDisabled -> Unit
-
-                        is BiometricResult.Failure -> {
-//                            stringResource(
-//                                R.string.biometric_error,
-//                                biometricResult.message
-//                            )
-                        }
-
-                        BiometricResult.Retry -> biometricAuthHelper.authenticate(activity)
-                        is BiometricResult.Success -> goToNextScreen()
-                    }
-                    Unit
-                }
         }
         Spacer(
             modifier = Modifier.height(32.dp)
@@ -153,15 +137,32 @@ fun LoginScreen(
                 showButtonText = isCorrect
                 if (isCorrect) {
 //                    signInAnimAndNavigate()
-//                    Snackbar { Text("Login successful") }
+                    Snackbar { Text("Login successful") }
                     LaunchedEffect(true) {
                         goToNextScreen()
                     }
                 }
-//                }
             }
 
-            MasterPasswordUIAction.IsFirstTime -> EducationalAuthDialog()
+            MasterPasswordUIAction.ShowBiometricsDialog -> {
+                val biometricResult by biometricAuthHelper.authenticate(activity)
+                    .collectAsState(null)
+//                    .also { biometricResult ->
+                utilLog("authenticate: result: $biometricResult")
+                when (biometricResult) {
+                    BiometricResult.CanceledBySystem,
+                    BiometricResult.CanceledByUser,
+                    BiometricResult.HardwareUnavailableOrDisabled,
+                    is BiometricResult.Failure -> {
+                        viewModel.onBiometricUnsuccessful()
+                    }
+
+                    BiometricResult.Retry -> viewModel.onRetryBiometric()
+
+                    is BiometricResult.Success -> viewModel.onBiometricSuccess()
+                    null -> Unit
+                }
+            }
         }
 
         Spacer(
@@ -232,12 +233,13 @@ fun LoginScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EducationalAuthDialog(modifier: Modifier = Modifier) {
+fun EducationalAuthDialog(modifier: Modifier = Modifier, onDismiss: DefaultLambda) {
     var shouldOpen by remember { mutableStateOf(true) }
     if (shouldOpen) {
         BasicAlertDialog(
             onDismissRequest = {
-                shouldOpen = false
+//                shouldOpen = false
+//                onDismiss()
             },
         ) {
             Surface(
@@ -257,7 +259,10 @@ fun EducationalAuthDialog(modifier: Modifier = Modifier) {
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     TextButton(
-                        onClick = { shouldOpen = false },
+                        onClick = {
+                            shouldOpen = false
+                            onDismiss()
+                        },
                         modifier = Modifier.align(Alignment.End)
                     ) {
                         Text(

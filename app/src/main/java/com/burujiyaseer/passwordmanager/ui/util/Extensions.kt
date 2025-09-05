@@ -20,7 +20,7 @@ internal fun utilLog(message: Any?) {
 @Composable
 fun Modifier.surface() = this.background(MaterialTheme.colorScheme.surface)
 
-
+typealias DefaultLambda = () -> Unit
 /**
  * Convenience wrapper for dark mode checking
  */

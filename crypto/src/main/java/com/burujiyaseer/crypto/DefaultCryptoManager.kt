@@ -2,8 +2,12 @@ package com.burujiyaseer.crypto
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.KeyStore
@@ -12,25 +16,23 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
 
-class DefaultCryptoManager(private val isAuthenticationRequired: Boolean) : CryptoManager {
+class DefaultCryptoManager() : CryptoManager {
 
-    private val keyStore = KeyStore.getInstance(KEYSTORE_TYPE).apply {
-        load(null)
-    }
+    private val keyStore = KeyStore.getInstance(KEYSTORE_TYPE).apply { load(null) }
 
-    private val encryptCipher
-        get() = Cipher.getInstance(TRANSFORMATION).apply {
+    private fun newEncryptCipher(): Cipher =
+        Cipher.getInstance(TRANSFORMATION).apply {
             init(Cipher.ENCRYPT_MODE, getKey())
         }
 
-    private fun getDecryptCipherForIv(byteArray: ByteArray): Cipher =
+    private fun newDecryptCipher(iv: ByteArray): Cipher =
         Cipher.getInstance(TRANSFORMATION).apply {
-            init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(byteArray))
+            init(Cipher.DECRYPT_MODE, getKey(), IvParameterSpec(iv))
         }
 
     private fun getKey(): SecretKey {
-        val existingKey = keyStore.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry
-        return existingKey?.secretKey ?: createKey()
+        val existing = keyStore.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry
+        return existing?.secretKey ?: createKey()
     }
 
     private fun createKey(): SecretKey {
@@ -40,10 +42,10 @@ class DefaultCryptoManager(private val isAuthenticationRequired: Boolean) : Cryp
                     ALIAS,
                     KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
                 )
-                    .setKeySize(KEY_SIZE * 8) // key size in bits
+                    .setKeySize(128) // AES-128; adjust if you really need 256 and device supports it
                     .setBlockModes(BLOCK_MODE)
                     .setEncryptionPaddings(PADDING)
-                    .setUserAuthenticationRequired(isAuthenticationRequired)
+                    .setUserAuthenticationRequired(false)
                     .setRandomizedEncryptionRequired(true)
                     .build()
             )
@@ -51,48 +53,50 @@ class DefaultCryptoManager(private val isAuthenticationRequired: Boolean) : Cryp
     }
 
     override suspend fun encrypt(bytes: ByteArray, outputStream: OutputStream) {
-        val cipher = encryptCipher
-        val iv = cipher.iv
-        outputStream.use {
-            it.write(iv)
-            // write the payload in chunks to make sure to support larger data amounts
-            // (this would otherwise fail silently and result in corrupted data being read back)
+        val cipher = newEncryptCipher()
+        val iv = cipher.iv // always block size (16 for AES/CBC)
+        DataOutputStream(BufferedOutputStream(outputStream)).use { out ->
+            // write IV length (int) + IV
+            out.writeInt(iv.size)
+            out.write(iv)
 
-            val inputStream = ByteArrayInputStream(bytes)
+            val inStream = ByteArrayInputStream(bytes)
             val buffer = ByteArray(CHUNK_SIZE)
-            while (inputStream.available() > CHUNK_SIZE) {
-                inputStream.read(buffer)
-                val ciphertextChunk = cipher.update(buffer)
-                it.write(ciphertextChunk)
+
+            var n = inStream.read(buffer)
+            while (n != -1) {
+                val chunk = cipher.update(buffer, 0, n)
+                if (chunk != null && chunk.isNotEmpty()) out.write(chunk)
+                n = inStream.read(buffer)
             }
-            // the last chunk must be written using doFinal() because this takes the padding into account
-            val remainingBytes = inputStream.readBytes()
-            val lastChunk = cipher.doFinal(remainingBytes)
-            it.write(lastChunk)
+
+            val last = cipher.doFinal()
+            if (last.isNotEmpty()) out.write(last)
         }
     }
 
     override fun decrypt(inputStream: InputStream): ByteArray {
-        return inputStream.use {
-            val iv = ByteArray(KEY_SIZE)
-            it.read(iv)
-            val cipher = getDecryptCipherForIv(iv)
-            val outputStream = ByteArrayOutputStream()
+        DataInputStream(BufferedInputStream(inputStream)).use { inp ->
+            val ivSize = inp.readInt()
+            require(ivSize in 12..32) { "Invalid IV size prefix: $ivSize" } // sanity check
+            val iv = ByteArray(ivSize)
+            inp.readFully(iv) // ensure IV is fully read
 
-            // read the payload in chunks to make sure to support larger data amounts
-            // (this would otherwise fail silently and result in corrupted data being read back)
+            val cipher = newDecryptCipher(iv)
+            val out = ByteArrayOutputStream()
             val buffer = ByteArray(CHUNK_SIZE)
-            while (inputStream.available() > CHUNK_SIZE) {
-                inputStream.read(buffer)
-                val ciphertextChunk = cipher.update(buffer)
-                outputStream.write(ciphertextChunk)
-            }
-            // the last chunk must be read using doFinal() because this takes the padding into account
-            val remainingBytes = inputStream.readBytes()
-            val lastChunk = cipher.doFinal(remainingBytes)
-            outputStream.write(lastChunk)
 
-            outputStream.toByteArray()
+            var n = inp.read(buffer)
+            while (n != -1) {
+                val chunk = cipher.update(buffer, 0, n)
+                if (chunk != null && chunk.isNotEmpty()) out.write(chunk)
+                n = inp.read(buffer)
+            }
+
+            val last = cipher.doFinal()
+            if (last.isNotEmpty()) out.write(last)
+
+            return out.toByteArray()
         }
     }
 
@@ -102,9 +106,7 @@ class DefaultCryptoManager(private val isAuthenticationRequired: Boolean) : Cryp
         private const val PADDING = KeyProperties.ENCRYPTION_PADDING_PKCS7
         private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
         private const val KEYSTORE_TYPE = "AndroidKeyStore"
-        private const val CHUNK_SIZE = 1024 * 4 // bytes
-        private const val KEY_SIZE = 16 // bytes
+        private const val CHUNK_SIZE = 4 * 1024
         private const val ALIAS = "my_alias"
     }
-
 }

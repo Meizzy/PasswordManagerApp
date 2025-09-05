@@ -1,6 +1,7 @@
 package com.burujiyaseer.passwordmanager.ui.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,13 +56,11 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                     val viewModel = hiltViewModel<ViewPasswordsViewModel>()
                     ViewPasswordsScreen(
                         modifier = modifier,
-                        onSearchClick = {
-
-                        },
+                        onSearchClick = viewModel::onQueryTextChanged,
                         onAddFabClick = { entryId ->
                             backStack.add(Destination.AddOrEditPasswordDestination(entryId))
                         },
-                        value = viewModel.passwordEntriesUIState.collectAsStateWithLifecycle().value,
+                        value = viewModel.passwordEntriesUIState.collectAsState().value,
                     )
                 }
             }
