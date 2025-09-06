@@ -22,8 +22,12 @@ import com.burujiyaseer.passwordmanager.domain.usecase.read_master_password.Defa
 import com.burujiyaseer.passwordmanager.domain.usecase.read_master_password.ReadMasterPassword
 import com.burujiyaseer.passwordmanager.domain.usecase.read_password_manager_by_id.DefaultReadPasswordManagerById
 import com.burujiyaseer.passwordmanager.domain.usecase.read_password_manager_by_id.ReadPasswordManagerById
+import com.burujiyaseer.passwordmanager.domain.usecase.read_suggestions.DefaultReadSuggestions
+import com.burujiyaseer.passwordmanager.domain.usecase.read_suggestions.ReadSuggestions
 import com.burujiyaseer.passwordmanager.domain.usecase.save_master_password.DefaultSaveMasterPassword
 import com.burujiyaseer.passwordmanager.domain.usecase.save_master_password.SaveMasterPassword
+import com.burujiyaseer.passwordmanager.domain.usecase.save_suggestion.DefaultSaveSuggestion
+import com.burujiyaseer.passwordmanager.domain.usecase.save_suggestion.SaveSuggestion
 import com.burujiyaseer.passwordmanager.domain.usecase.show_ed_dialog.DefaultSaveShownEdDialog
 import com.burujiyaseer.passwordmanager.domain.usecase.show_ed_dialog.SaveShownEdDialog
 import dagger.Binds
@@ -73,4 +77,10 @@ interface DomainModule {
 
     @Binds
     fun bindSaveEdDialogState(useCase: DefaultSaveShownEdDialog): SaveShownEdDialog
+
+    @Binds
+    fun bindSaveSuggestion(useCase: DefaultSaveSuggestion): SaveSuggestion
+
+    @Binds
+    fun bindReadSuggestions(useCase: DefaultReadSuggestions): ReadSuggestions
 }

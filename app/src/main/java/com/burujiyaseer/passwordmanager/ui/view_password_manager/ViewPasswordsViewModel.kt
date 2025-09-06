@@ -2,29 +2,44 @@ package com.burujiyaseer.passwordmanager.ui.view_password_manager
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.burujiyaseer.passwordmanager.domain.model.PasswordManagerModel
 import com.burujiyaseer.passwordmanager.domain.usecase.get_all_password_manager_entries.GetAllPasswordManagerEntries
+import com.burujiyaseer.passwordmanager.domain.usecase.read_suggestions.ReadSuggestions
+import com.burujiyaseer.passwordmanager.domain.usecase.save_suggestion.SaveSuggestion
 import com.burujiyaseer.passwordmanager.ui.util.Constants.EMPTY_STRING
 import com.burujiyaseer.passwordmanager.ui.util.utilLog
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val SEARCH_DELAY = 500L
 @HiltViewModel
 class ViewPasswordsViewModel @Inject constructor(
-    getAllPasswordManagerEntries: GetAllPasswordManagerEntries
+    getAllPasswordManagerEntries: GetAllPasswordManagerEntries,
+    readSuggestions: ReadSuggestions,
+    private val saveSuggestion: SaveSuggestion
 ) : ViewModel() {
+
+    /**
+     * the submitted search query
+     */
     private val queryText = MutableStateFlow(EMPTY_STRING)
 
-    @OptIn(FlowPreview::class)
-    val passwordEntriesUIState = getAllPasswordManagerEntries().combine(
-        queryText.debounce(SEARCH_DELAY)
+    /**
+     * the suggested query
+     */
+    private val suggestionText = MutableStateFlow(EMPTY_STRING)
+
+    private val allPasswordEntriesFlow = getAllPasswordManagerEntries()
+    private val savedSuggestionsFlow = readSuggestions()
+
+    val passwordEntriesUIState = allPasswordEntriesFlow.combine(
+        queryText
     ) { passwordManagerModels, query ->
         utilLog("query: $query")
         val filteredQueries = if (query.isNotEmpty()) passwordManagerModels.filter { passwordManagerModel ->
@@ -41,8 +56,41 @@ class ViewPasswordsViewModel @Inject constructor(
             null
         )
 
-    fun onQueryTextChanged(newText: String) {
-        queryText.update { newText }
+    val suggestionsUIState = combine(
+        savedSuggestionsFlow,
+        suggestionText,
+    ) { savedSuggestions, query ->
+        val passwordManagerModels = allPasswordEntriesFlow.first()
+//            (passwordEntriesUIState.value as ViewPasswordUIAction.SubmitData).filteredQueries
+        val filteredSuggestions = if (query.isNotEmpty()) passwordManagerModels.mapNotNull { passwordManagerModel ->
+            if (passwordManagerModel.title.contains(query, true)) passwordManagerModel.title
+            else null
+        } else savedSuggestions
+        utilLog("suggestion: $query, suggestions: $filteredSuggestions")
+        filteredSuggestions.map { suggestion ->
+            SuggestionModel(suggestion, query.isEmpty())
+        }
+    }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            emptyList()
+        )
+
+    fun onQueryTextSubmitted(newText: String) {
+        viewModelScope.launch {
+            queryText.update { newText }
+            if (newText.isNotBlank()) saveSuggestion(newText)
+        }
     }
 
+    fun onSuggestionTextChanged(newText: String) {
+        suggestionText.update { newText }
+    }
+
+    fun onRemovedSuggestion(suggestion: String) {
+        viewModelScope.launch {
+            saveSuggestion.deleteSuggestion(suggestion)
+        }
+    }
 }

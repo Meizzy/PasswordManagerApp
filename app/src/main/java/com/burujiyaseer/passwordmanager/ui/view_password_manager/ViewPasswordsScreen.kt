@@ -4,9 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -27,9 +29,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Card
@@ -68,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.burujiyaseer.passwordmanager.R
+import com.burujiyaseer.passwordmanager.ui.util.OnSVIcon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
@@ -76,7 +80,11 @@ import kotlin.random.Random
 @Composable
 fun ViewPasswordPreview() {
     ViewPasswordsScreen(
-        value = ViewPasswordUIAction.ShowEmptyListPrompt
+        value = ViewPasswordUIAction.ShowEmptyListPrompt,
+        suggestions = listOf("amazing", "b").mapIndexed { i, s ->
+            SuggestionModel(s, i < 1)
+        }
+
 //        SubmitData(
 //            List(10) {
 //                UIPasswordModel().run {
@@ -105,8 +113,10 @@ fun ViewPasswordsScreen(
     modifier: Modifier = Modifier,
     onSearchClick: ((String) -> Unit)? = null,
     onAddFabClick: ((String?) -> Unit)? = null,
-//    onRemoveSuggestion: ((String?) -> Unit)? = null,
-    value: ViewPasswordUIAction? = ViewPasswordUIAction.ShowEmptyListPrompt
+    onSuggestion: ((String) -> Unit)? = null,
+    onRemoveSuggestion: ((String) -> Unit)? = null,
+    value: ViewPasswordUIAction? = ViewPasswordUIAction.ShowEmptyListPrompt,
+    suggestions: List<SuggestionModel> = emptyList()
 ) {
     val listState = rememberLazyListState()
     val extendedFab by remember { derivedStateOf { !listState.isScrollInProgress } }
@@ -124,20 +134,38 @@ fun ViewPasswordsScreen(
                         query = text,
                         onQueryChange = {
                             text = it
-                            onSearchClick?.invoke(it)
+                            onSuggestion?.invoke(it)
                         },
-                        onSearch = { expanded = false },
+                        onSearch = {
+                            onSearchClick?.invoke(it)
+                            expanded = false
+                        },
                         expanded = expanded,
                         onExpandedChange = { expanded = it },
                         placeholder = { Text(stringResource(R.string.search)) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        leadingIcon = {
+                            if (expanded || text.isNotBlank()) IconButton(
+                                onClick = {
+                                    text = ""
+                                    onSearchClick?.invoke("")
+                                    expanded = false
+                                }
+                            ) {
+                                OnSVIcon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack
+                                )
+                            }
+                            else OnSVIcon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(android.R.string.search_go)
+                            )
+                        },
                         trailingIcon = {
-                            if (expanded)
+                            if (expanded && text.isNotBlank())
                                 IconButton(
                                     onClick = {
                                         text = ""
-                                        onSearchClick?.invoke("")
-                                        expanded = false
+                                        onSuggestion?.invoke("")
                                     }
                                 ) {
                                     Icon(
@@ -154,20 +182,45 @@ fun ViewPasswordsScreen(
                     containerColor = Color.Transparent,
                 )
             ) {
-//                LazyColumn {
-//                    items((value as ViewPasswordUIAction.SubmitData).filteredQueries) {
-//                        Row {
-//                            Text(it.title)
-//                            IconButton(
-//                                onRemoveSuggestion?.invoke(it.entryId)
-//                            ) {
-//                                Icon(
-//                                    imageVector = Icons.Default.Close,
-//                                    contentDescription = null)
-//                            }
-//                        }
-//                    }
-//                }
+                LazyColumn(
+                    contentPadding = PaddingValues(vertical = 8.dp, horizontal = 4.dp)
+                ) {
+                    items(suggestions) {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable {
+                                text = it.suggestion
+                                onSearchClick?.invoke(it.suggestion)
+                                expanded = false
+                            }
+                        ) {
+                            Row (
+                                modifier = Modifier
+                            ) {
+                                if (it.saved) OnSVIcon(
+                                    imageVector = Icons.Default.Refresh
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = it.suggestion,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    onRemoveSuggestion?.invoke(it.suggestion)
+                                }
+                            ) {
+                                OnSVIcon(
+                                    imageVector = Icons.Default.Close
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
         floatingActionButton = {
@@ -260,10 +313,9 @@ fun ViewPasswordsScreen(
                                         onAddFabClick?.invoke(passwordModel.entryId)
                                     }
                                 ) {
-                                    Icon(
+                                    OnSVIcon(
                                         imageVector = Icons.Rounded.Edit,
-                                        contentDescription = stringResource(R.string.edit),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        contentDescription = stringResource(R.string.edit)
                                     )
                                 }
                             }
@@ -344,7 +396,8 @@ fun EmptyText(modifier: Modifier = Modifier, textId: Int) {
     ) {
         Text(
             text = stringResource(textId),
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

@@ -56,11 +56,14 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                     val viewModel = hiltViewModel<ViewPasswordsViewModel>()
                     ViewPasswordsScreen(
                         modifier = modifier,
-                        onSearchClick = viewModel::onQueryTextChanged,
+                        onSearchClick = viewModel::onQueryTextSubmitted,
+                        onRemoveSuggestion = viewModel::onRemovedSuggestion,
+                        onSuggestion = viewModel::onSuggestionTextChanged,
                         onAddFabClick = { entryId ->
                             backStack.add(Destination.AddOrEditPasswordDestination(entryId))
                         },
                         value = viewModel.passwordEntriesUIState.collectAsState().value,
+                        suggestions = viewModel.suggestionsUIState.collectAsState().value
                     )
                 }
             }
