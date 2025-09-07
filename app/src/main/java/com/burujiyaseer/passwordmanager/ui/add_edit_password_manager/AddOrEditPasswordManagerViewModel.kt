@@ -1,6 +1,5 @@
 package com.burujiyaseer.passwordmanager.ui.add_edit_password_manager
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.burujiyaseer.passwordmanager.R
@@ -11,88 +10,79 @@ import com.burujiyaseer.passwordmanager.domain.usecase.get_website_fav_icon_url.
 import com.burujiyaseer.passwordmanager.domain.usecase.insert_password_manager.InsertPasswordManager
 import com.burujiyaseer.passwordmanager.domain.usecase.read_password_manager_by_id.ReadPasswordManagerById
 import com.burujiyaseer.passwordmanager.ui.util.Constants.EMPTY_STRING
-import com.burujiyaseer.passwordmanager.ui.util.Constants.PASSWORD_ENTRY_ID_KEY
-import com.burujiyaseer.passwordmanager.ui.util.utilLog
+import com.burujiyaseer.passwordmanager.ui.util.StandardWhileSubscribed
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
-import javax.inject.Inject
 
-@HiltViewModel
-class AddOrEditPasswordManagerViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+@HiltViewModel(assistedFactory = AddOrEditPasswordManagerViewModel.Factory::class)
+class AddOrEditPasswordManagerViewModel @AssistedInject constructor(
+    readPasswordManagerById: ReadPasswordManagerById,
     private val insertPasswordManager: InsertPasswordManager,
     private val encryptDecryptPassword: EncryptDecryptPassword,
-    private val readPasswordManagerById: ReadPasswordManagerById,
     private val deletePasswordManagerEntry: DeletePasswordManagerEntry,
-    private val saveFavIconFromWebsiteUrl: SaveFavIconFromWebsiteUrl
+    private val saveFavIconFromWebsiteUrl: SaveFavIconFromWebsiteUrl,
+    @Assisted private val entryId: String?
 ) : ViewModel() {
 
-    private val passwordEntryIdFlow =
-        savedStateHandle.getStateFlow<String?>(PASSWORD_ENTRY_ID_KEY, null)
+    @AssistedFactory
+    interface Factory {
+        fun createKey(entryId: String?): AddOrEditPasswordManagerViewModel
+    }
 
     /**
      * this flow represents the state of the password entry in the moment of entry,
      * when adding a new password -> null, when editing - the currently saved state of the
      * entry in the database.
      */
-    val currentPasswordUIState = passwordEntryIdFlow.map { passwordEntryId ->
-        AddEditPasswordManagerAction.FillUIFields(
-            uiPasswordModel = if (!passwordEntryId.isNullOrEmpty()) readPasswordManagerById(
-                passwordEntryId
-            )?.let { passwordManagerModel ->
-                passwordManagerModel.run {
-                    UIPasswordModel(
-                        passwordManagerModel.entryId,
-                        title = title,
-                        account = account,
-                        username = username,
-                        password = password,
-                        websiteUrl = websiteUrl,
-                        description = description
-                    )
-                }
-            } else null,
-            titleResId = if (passwordEntryId.isNullOrEmpty()) R.string.add else R.string.edit,
-        )
+    val currentPasswordUIState = readPasswordManagerById(
+        entryId
+    ).map { passwordManagerModel ->
+        entryId?.ifEmpty { null }.let { passwordEntryId ->
+            AddEditPasswordManagerAction.FillUIFields(
+                uiPasswordModel =
+                    passwordManagerModel?.run {
+                        UIPasswordModel(
+                            passwordManagerModel.entryId,
+                            title = title,
+                            account = account,
+                            username = username,
+                            password = password,
+                            websiteUrl = websiteUrl,
+                            description = description
+                        )
+                    } ?: UIPasswordModel(),
+                titleResId = if (passwordEntryId != null) R.string.add else R.string.edit,
+                addDeleteMenu = passwordEntryId != null
+            )
+        }
     }.stateIn(
         viewModelScope,
-        SharingStarted.Eagerly,
-        null
+        SharingStarted.StandardWhileSubscribed(),
+        AddEditPasswordManagerAction.FillUIFields(UIPasswordModel(), R.string.add, false)
     )
-
-    private val _titleStateFlow = MutableStateFlow(EMPTY_STRING)
-    private val _passwordStateFlow = MutableStateFlow(EMPTY_STRING)
-    private val _websiteStateFlow = MutableStateFlow(EMPTY_STRING)
     private val _uiActionFlow = MutableStateFlow<AddEditPasswordManagerAction?>(null)
     val uiActionFlow = _uiActionFlow.asStateFlow()
 
-    fun onEvent(event: AddEditPasswordManagerEvent) {
-        when (event) {
-            is AddEditPasswordManagerEvent.AddedPassword -> updatePassword(event.password)
-            is AddEditPasswordManagerEvent.AddedTitle -> updateTitle(event.title)
-            is AddEditPasswordManagerEvent.AddedWebsite -> updateWebsite(event.websiteUrl)
-            is AddEditPasswordManagerEvent.SavePasswordEntry -> savePasswordEntry(event.uiPasswordModel)
-            AddEditPasswordManagerEvent.DeletePasswordEntryClicked -> deletePasswordEntryClicked()
-            AddEditPasswordManagerEvent.PositiveDeletePasswordEntry -> positiveDeletePasswordEntry()
-            AddEditPasswordManagerEvent.LeavePasswordEntryClicked -> leavePasswordEntryClicked()
-            AddEditPasswordManagerEvent.PositiveLeavePasswordEntry -> navigateBack()
-        }
-    }
+    private val _uiPasswordModelStateFlow = MutableStateFlow(UIPasswordModel())
 
-    private fun leavePasswordEntryClicked() {
+    fun positiveDeletePasswordEntry() {
         viewModelScope.launch {
-            _uiActionFlow.emit(
-                AddEditPasswordManagerAction.ShowConfirmExitDialog
-            )
+            //remove entry from database if necessary
+            if (!entryId.isNullOrEmpty())
+                deletePasswordManagerEntry(entryId)
+            // return to view password fragment
+            navigateBack()
         }
     }
 
@@ -104,56 +94,45 @@ class AddOrEditPasswordManagerViewModel @Inject constructor(
         }
     }
 
-    private fun positiveDeletePasswordEntry() {
-        viewModelScope.launch {
-            val passwordEntryId = passwordEntryIdFlow.value
-            //remove entry from database if necessary
-            if (!passwordEntryId.isNullOrEmpty())
-                deletePasswordManagerEntry(passwordEntryId)
-            // return to view password fragment
-            navigateBack()
-        }
+    fun updateWebsite(websiteUrl: String) {
+        _uiPasswordModelStateFlow.update { it.copy(websiteUrl = websiteUrl) }
     }
 
-    private fun deletePasswordEntryClicked() {
-        viewModelScope.launch {
-            _uiActionFlow.emit(
-                AddEditPasswordManagerAction.ShowConfirmDeleteDialog
-            )
-        }
+    fun updateTitle(title: String) {
+        _uiPasswordModelStateFlow.update { it.copy(title = title) }
     }
 
-
-    private fun updateWebsite(websiteUrl: String) {
-        _websiteStateFlow.update { websiteUrl }
+    fun updatePassword(password: String) {
+        _uiPasswordModelStateFlow.update { it.copy(password = password) }
     }
 
-    private fun updateTitle(title: String) {
-        _titleStateFlow.update { title }
+    fun updateAccount(account: String) {
+        _uiPasswordModelStateFlow.update { it.copy(account = account) }
     }
 
-    private fun updatePassword(password: String) {
-        _passwordStateFlow.update { password }
+    fun updateUsername(username: String) {
+        _uiPasswordModelStateFlow.update { it.copy(username = username) }
     }
 
-    val shouldEnableDoneButton = combine(
-        _titleStateFlow,
-        _passwordStateFlow,
-        _websiteStateFlow
-    ) { title, password, websiteUrl ->
+    fun updateDescription(description: String) {
+        _uiPasswordModelStateFlow.update { it.copy(description = description) }
+    }
+
+    val shouldEnableDoneButton = _uiPasswordModelStateFlow.map {
         AddEditPasswordManagerAction.ToggleDoneBtnEnabled(
-            listOf(title, password, websiteUrl).all { it.isNotBlank() }
+            listOf(it.title, it.password, it.websiteUrl).all(CharSequence::isNotBlank)
         )
     }.stateIn(
         viewModelScope,
-        SharingStarted.Eagerly,
-        null
+        SharingStarted.StandardWhileSubscribed(),
+        AddEditPasswordManagerAction.ToggleDoneBtnEnabled(false)
     )
 
-    private fun savePasswordEntry(uiPasswordModel: UIPasswordModel) {
+    fun savePasswordEntry() {
         viewModelScope.launch {
             //show loading
             _uiActionFlow.emit(AddEditPasswordManagerAction.ShowLoader)
+            val uiPasswordModel = _uiPasswordModelStateFlow.value
             // encrypt password and get password filename
             val deferredPasswordFilename = async {
                 encryptDecryptPassword.encryptPassword(uiPasswordModel.password)
@@ -164,16 +143,12 @@ class AddOrEditPasswordManagerViewModel @Inject constructor(
             // await completion of all values
             val passwordFilename = deferredPasswordFilename.await()
             val favIconUrl = deferredFavIconUrl.await()
-            utilLog(
-                "password: ${encryptDecryptPassword.decryptPassword(passwordFilename)} \n" +
-                        "favIconUrl: $favIconUrl"
-            )
             // save the entry into the database
             insertPasswordManager(
                 uiPasswordModel.run {
                     PasswordManagerModel(
                         // we use the current entryId, if null we generate a new one
-                        entryId = currentPasswordUIState.value?.uiPasswordModel?.entryId
+                        entryId = uiPasswordModel.entryId
                             ?: UUID.randomUUID().toString(),
                         title = title,
                         account = account,

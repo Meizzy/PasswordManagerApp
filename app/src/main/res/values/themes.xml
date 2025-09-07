@@ -1,46 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
 
-    <style name="Theme.PasswordManager" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">#6750A4</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorPrimaryContainer">#EADDFF</item>
-        <item name="colorOnPrimaryContainer">#21005D</item>
-        <item name="colorPrimaryFixed">#EADDFF</item>
-        <item name="colorOnPrimaryFixed">#21005D</item>
-        <item name="colorPrimaryFixedDim">#D0BCFF</item>
-        <item name="colorOnPrimaryFixedVariant">#4F378B</item>
-        <item name="colorSecondary">#625B71</item>
-        <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="colorSecondaryContainer">#E8DEF8</item>
-        <item name="colorOnSecondaryContainer">#1D192B</item>
-        <item name="colorSecondaryFixed">#E8DEF8</item>
-        <item name="colorOnSecondaryFixed">#1D192B</item>
-        <item name="colorSecondaryFixedDim">#CCC2DC</item>
-        <item name="colorOnSecondaryFixedVariant">#4A4458</item>
-        <item name="colorTertiary">#7D5260</item>
-        <item name="colorOnTertiary">#FFFFFF</item>
-        <item name="colorTertiaryContainer">#FFD8E4</item>
-        <item name="colorOnTertiaryContainer">#31111D</item>
-        <item name="colorError">#B3261E</item>
-        <item name="colorOnError">#FFFFFF</item>
-        <item name="colorErrorContainer">#F9DEDC</item>
-        <item name="colorOnErrorContainer">#410E0B</item>
-        <item name="colorOutline">#79747E</item>
-        <item name="android:colorBackground">#FEF7FF</item>
-        <item name="colorOnBackground">#1D1B20</item>
-        <item name="colorSurface">#FEF7FF</item>
-        <item name="colorOnSurface">#1D1B20</item>
-        <item name="colorSurfaceVariant">#E7E0EC</item>
-        <item name="colorOnSurfaceVariant">#49454F</item>
-        <item name="colorSurfaceInverse">#322F35</item>
-        <item name="colorOnSurfaceInverse">#F5EFF7</item>
-        <item name="colorPrimaryInverse">#D0BCFF</item>
-        <item name="colorOutlineVariant">#CAC4D0</item>
-        <item name="colorSurfaceContainerHighest">#E6E0E9</item>
-        <item name="colorSurfaceContainerHigh">#ECE6F0</item>
-        <item name="colorSurfaceContainer">#F3EDF7</item>
-        <item name="colorSurfaceContainerLow">#F7F2FA</item>
-        <item name="colorSurfaceContainerLowest">#FFFFFF</item>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Allows us to override night specific attributes in the
+         values-night folder. -->
+    <style name="NightAdjusted.Theme.PasswordManager" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- The final theme we use -->
+    <style name="Theme.PasswordManager" parent="NightAdjusted.Theme.PasswordManager">
+        <item name="android:forceDarkAllowed" tools:targetApi="29">false</item>
     </style>
+
+    <style name="NightAdjusted.Theme.Splash" parent="Theme.SplashScreen">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+    </style>
+
+    <style name="Theme.PasswordManager.Splash" parent="NightAdjusted.Theme.Splash">
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.PasswordManager</item>
+    </style>
+
 </resources>

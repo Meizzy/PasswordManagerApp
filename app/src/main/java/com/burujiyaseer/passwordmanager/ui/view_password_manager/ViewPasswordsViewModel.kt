@@ -1,50 +1,49 @@
 package com.burujiyaseer.passwordmanager.ui.view_password_manager
 
-import android.os.Bundle
-import androidx.annotation.IdRes
-import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.burujiyaseer.passwordmanager.R
 import com.burujiyaseer.passwordmanager.domain.usecase.get_all_password_manager_entries.GetAllPasswordManagerEntries
+import com.burujiyaseer.passwordmanager.domain.usecase.read_suggestions.ReadSuggestions
+import com.burujiyaseer.passwordmanager.domain.usecase.save_suggestion.SaveSuggestion
 import com.burujiyaseer.passwordmanager.ui.util.Constants.EMPTY_STRING
-import com.burujiyaseer.passwordmanager.ui.util.Constants.PASSWORD_ENTRY_ID_KEY
+import com.burujiyaseer.passwordmanager.ui.util.StandardWhileSubscribed
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
-private const val SEARCH_DELAY = 500L
 @HiltViewModel
 class ViewPasswordsViewModel @Inject constructor(
-    getAllPasswordManagerEntries: GetAllPasswordManagerEntries
+    getAllPasswordManagerEntries: GetAllPasswordManagerEntries,
+    readSuggestions: ReadSuggestions,
+    private val saveSuggestion: SaveSuggestion
 ) : ViewModel() {
 
-    private val _uiActionFlow = MutableStateFlow<ViewPasswordUIAction?>(null)
-    val uiActionFlow = _uiActionFlow.asStateFlow()
+    /**
+     * the submitted search query
+     */
     private val queryText = MutableStateFlow(EMPTY_STRING)
 
-    private val _navigationActionState =
-        MutableStateFlow<ViewPasswordUIAction.NavigationAction?>(null)
-    val navigationActionState = _navigationActionState.asStateFlow()
-    private val navigationMutex = Mutex()
+    /**
+     * the suggested query
+     */
+    private val suggestionText = MutableStateFlow(EMPTY_STRING)
 
-    @OptIn(FlowPreview::class)
-    val passwordEntriesUIState = getAllPasswordManagerEntries().combine(
-        queryText.debounce(SEARCH_DELAY)
+    private val allPasswordEntriesFlow = getAllPasswordManagerEntries()
+    private val savedSuggestionsFlow = readSuggestions()
+
+    val passwordEntriesUIState = allPasswordEntriesFlow.combine(
+        queryText
     ) { passwordManagerModels, query ->
-        val filteredQueries = if (query.isNotEmpty()) passwordManagerModels.filter { passwordManagerModel ->
-            passwordManagerModel.title.contains(query, true)
-        } else passwordManagerModels
+        val filteredQueries =
+            if (query.isNotEmpty()) passwordManagerModels.filter { passwordManagerModel ->
+                passwordManagerModel.title.contains(query, true)
+            } else passwordManagerModels
 
         if (passwordManagerModels.isEmpty()) ViewPasswordUIAction.ShowEmptyListPrompt
         else if (filteredQueries.isEmpty()) ViewPasswordUIAction.ShowEmptySearchResults
@@ -52,50 +51,44 @@ class ViewPasswordsViewModel @Inject constructor(
     }
         .stateIn(
             viewModelScope,
-            SharingStarted.Eagerly,
+            SharingStarted.StandardWhileSubscribed(),
             null
         )
 
-    fun onAddPasswordClicked() {
+    val suggestionsUIState = combine(
+        savedSuggestionsFlow,
+        suggestionText,
+    ) { savedSuggestions, query ->
+        val passwordManagerModels = allPasswordEntriesFlow.first()
+        val filteredSuggestions =
+            if (query.isNotEmpty()) passwordManagerModels.mapNotNull { passwordManagerModel ->
+                if (passwordManagerModel.title.contains(query, true)) passwordManagerModel.title
+                else null
+            } else savedSuggestions
+        filteredSuggestions.map { suggestion ->
+            SuggestionModel(suggestion, query.isEmpty())
+        }
+    }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.StandardWhileSubscribed(),
+            emptyList()
+        )
+
+    fun onQueryTextSubmitted(newText: String) {
         viewModelScope.launch {
-            setupNavigationState()
+            queryText.update { newText }
+            if (newText.isNotBlank()) saveSuggestion(newText)
         }
     }
 
-    fun onPasswordEntryClicked(entryId: String) {
+    fun onSuggestionTextChanged(newText: String) {
+        suggestionText.update { newText }
+    }
+
+    fun onRemovedSuggestion(suggestion: String) {
         viewModelScope.launch {
-            setupNavigationState(
-                bundleOf(PASSWORD_ENTRY_ID_KEY to entryId)
-            )
+            saveSuggestion.deleteSuggestion(suggestion)
         }
     }
-
-    private suspend fun setupNavigationState(
-        args: Bundle = Bundle.EMPTY
-    ) {
-        navigationMutex.withLock {
-            if (navigationActionState.value == null) _navigationActionState.update {
-                ViewPasswordUIAction.NavigationAction(
-                    destinationId = R.id.addOrEditPasswordFragment,
-                    args = args
-                )
-            }
-        }
-    }
-
-    fun onNavigationHandled() {
-        viewModelScope.launch {
-            resetNavigationState()
-        }
-    }
-    private suspend fun resetNavigationState() {
-        navigationMutex.withLock {
-            _navigationActionState.update { null }
-        }
-    }
-
-    fun onQueryTextChanged(newText: String) {
-        queryText.update { newText }
-    }
-
 }

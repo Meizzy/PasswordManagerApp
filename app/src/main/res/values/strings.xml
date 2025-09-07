@@ -28,4 +28,5 @@
     <string name="search">Search</string>
     <string name="no_search_results">No matches found! try another title keyword</string>
     <string name="empty_password_entries">Create your first password!</string>
+    <string name="title_activity_compose" translatable="false">ComposeActivity</string>
 </resources>

@@ -13,35 +13,36 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import javax.inject.Inject
+
 private const val EMPTY_STRING = ""
-@Suppress("BlockingMethodInNonBlockingContext")
+
 class DefaultEncryptDecryptPassword @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val dispatcherProvider: CoroutineDispatcherProvider,
 ) : EncryptDecryptPassword {
 
     private val cryptoManager: CryptoManager by lazy {
-        DefaultCryptoManager(
-            appContext.getSystemService<KeyguardManager>()?.isDeviceSecure == true
-        )
+        DefaultCryptoManager()
     }
 
-    override suspend fun encryptPassword(password: String, fileName: String): String = kotlin.runCatching {
-        withContext(dispatcherProvider.io()) {
-            val bytes = password.encodeToByteArray()
-            val file = File(appContext.filesDir, fileName)
-            if (!file.exists()) {
-                file.createNewFile()
-            }
+    override suspend fun encryptPassword(password: String, fileName: String): String =
+        kotlin.runCatching {
+            withContext(dispatcherProvider.io()) {
+                val bytes = password.encodeToByteArray()
+                val file = File(appContext.filesDir, fileName)
+                if (!file.exists()) {
+                    file.createNewFile()
+                }
 
-            //encrypt the data
-            cryptoManager.encrypt(
-                bytes = bytes,
-                outputStream = FileOutputStream(file)
-            )
-            fileName
-        }
-    }.onFailure { utilLog("encrypt password error: $it, message:${it.message}") }.getOrDefault(EMPTY_STRING)
+                //encrypt the data
+                cryptoManager.encrypt(
+                    bytes = bytes,
+                    outputStream = FileOutputStream(file)
+                )
+                fileName
+            }
+        }.onFailure { utilLog("encrypt password error: $it, message:${it.message}") }
+            .getOrDefault(EMPTY_STRING)
 
     override suspend fun decryptPassword(fileName: String): String? = kotlin.runCatching {
         withContext(dispatcherProvider.io()) {

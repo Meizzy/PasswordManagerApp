@@ -5,12 +5,10 @@ import androidx.annotation.StringRes
 sealed interface AddEditPasswordManagerAction {
     data class ToggleDoneBtnEnabled(val isEnabled: Boolean) : AddEditPasswordManagerAction
     data class FillUIFields(
-        val uiPasswordModel: UIPasswordModel?,
-        @StringRes val titleResId: Int
+        val uiPasswordModel: UIPasswordModel,
+        @StringRes val titleResId: Int,
+        val addDeleteMenu: Boolean
     ) : AddEditPasswordManagerAction
-
-    data object ShowConfirmDeleteDialog : AddEditPasswordManagerAction
-    data object ShowConfirmExitDialog : AddEditPasswordManagerAction
     data object ShowLoader : AddEditPasswordManagerAction
     data object NavigateBack : AddEditPasswordManagerAction
 }
