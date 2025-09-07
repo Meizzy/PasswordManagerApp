@@ -1,7 +1,10 @@
+package com.burujiyaseer.passwordmanager.ui.ui.theme
+
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.Lifecycle
 
 @Immutable
 data class BackgroundTheme(
@@ -13,3 +16,5 @@ data class BackgroundTheme(
  * A composition local for [BackgroundTheme].
  */
 val LocalBackgroundTheme = staticCompositionLocalOf { BackgroundTheme() }
+
+val LocalAppLifeCycle = staticCompositionLocalOf<Lifecycle> { error("no lifecycle provided") }

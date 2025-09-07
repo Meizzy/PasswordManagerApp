@@ -235,7 +235,7 @@ fun ViewPasswordsScreen(
                     )
                 },
                 onClick = { onAddFabClick?.invoke(null) },
-                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+//                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 expanded = extendedFab,
                 modifier = Modifier.systemBarsPadding()
             )

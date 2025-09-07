@@ -2,12 +2,11 @@ package com.burujiyaseer.passwordmanager.ui.view_password_manager
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.burujiyaseer.passwordmanager.domain.model.PasswordManagerModel
 import com.burujiyaseer.passwordmanager.domain.usecase.get_all_password_manager_entries.GetAllPasswordManagerEntries
 import com.burujiyaseer.passwordmanager.domain.usecase.read_suggestions.ReadSuggestions
 import com.burujiyaseer.passwordmanager.domain.usecase.save_suggestion.SaveSuggestion
 import com.burujiyaseer.passwordmanager.ui.util.Constants.EMPTY_STRING
-import com.burujiyaseer.passwordmanager.ui.util.utilLog
+import com.burujiyaseer.passwordmanager.ui.util.StandardWhileSubscribed
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,10 +40,10 @@ class ViewPasswordsViewModel @Inject constructor(
     val passwordEntriesUIState = allPasswordEntriesFlow.combine(
         queryText
     ) { passwordManagerModels, query ->
-        utilLog("query: $query")
-        val filteredQueries = if (query.isNotEmpty()) passwordManagerModels.filter { passwordManagerModel ->
-            passwordManagerModel.title.contains(query, true)
-        } else passwordManagerModels
+        val filteredQueries =
+            if (query.isNotEmpty()) passwordManagerModels.filter { passwordManagerModel ->
+                passwordManagerModel.title.contains(query, true)
+            } else passwordManagerModels
 
         if (passwordManagerModels.isEmpty()) ViewPasswordUIAction.ShowEmptyListPrompt
         else if (filteredQueries.isEmpty()) ViewPasswordUIAction.ShowEmptySearchResults
@@ -52,7 +51,7 @@ class ViewPasswordsViewModel @Inject constructor(
     }
         .stateIn(
             viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
+            SharingStarted.StandardWhileSubscribed(),
             null
         )
 
@@ -61,19 +60,18 @@ class ViewPasswordsViewModel @Inject constructor(
         suggestionText,
     ) { savedSuggestions, query ->
         val passwordManagerModels = allPasswordEntriesFlow.first()
-//            (passwordEntriesUIState.value as ViewPasswordUIAction.SubmitData).filteredQueries
-        val filteredSuggestions = if (query.isNotEmpty()) passwordManagerModels.mapNotNull { passwordManagerModel ->
-            if (passwordManagerModel.title.contains(query, true)) passwordManagerModel.title
-            else null
-        } else savedSuggestions
-        utilLog("suggestion: $query, suggestions: $filteredSuggestions")
+        val filteredSuggestions =
+            if (query.isNotEmpty()) passwordManagerModels.mapNotNull { passwordManagerModel ->
+                if (passwordManagerModel.title.contains(query, true)) passwordManagerModel.title
+                else null
+            } else savedSuggestions
         filteredSuggestions.map { suggestion ->
             SuggestionModel(suggestion, query.isEmpty())
         }
     }
         .stateIn(
             viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
+            SharingStarted.StandardWhileSubscribed(),
             emptyList()
         )
 

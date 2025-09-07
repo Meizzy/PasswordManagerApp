@@ -40,7 +40,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +54,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.burujiyaseer.passwordmanager.R
-import com.burujiyaseer.passwordmanager.ui.util.utilLog
+import com.burujiyaseer.passwordmanager.ui.util.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +63,7 @@ fun AddOrEditPasswordScreen(
     viewModel: AddOrEditPasswordManagerViewModel,
     popScreen: () -> Unit
 ) {
-    val passwordState by viewModel.currentPasswordUIState.collectAsState()
+    val passwordState by viewModel.currentPasswordUIState.collectAsStateWithLifecycle()
     var dialogState by remember { mutableStateOf(DialogState.Dismiss) }
     Scaffold(
         modifier = modifier.imePadding(),
@@ -122,10 +121,8 @@ fun AddOrEditPasswordScreen(
         ) {
 
             var loadingState by remember { mutableStateOf(false) }
-            val doneButtonState =
-                viewModel.shouldEnableDoneButton.collectAsState().value
-            val state = viewModel.uiActionFlow.collectAsState().value
-            utilLog("passwordState: $passwordState")
+            val doneButtonState by viewModel.shouldEnableDoneButton.collectAsStateWithLifecycle()
+            val state by viewModel.uiActionFlow.collectAsStateWithLifecycle()
             loadingState = state is AddEditPasswordManagerAction.ShowLoader
 
             if (state == AddEditPasswordManagerAction.NavigateBack) {

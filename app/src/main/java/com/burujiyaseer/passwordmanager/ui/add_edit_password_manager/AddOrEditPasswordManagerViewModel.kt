@@ -10,7 +10,7 @@ import com.burujiyaseer.passwordmanager.domain.usecase.get_website_fav_icon_url.
 import com.burujiyaseer.passwordmanager.domain.usecase.insert_password_manager.InsertPasswordManager
 import com.burujiyaseer.passwordmanager.domain.usecase.read_password_manager_by_id.ReadPasswordManagerById
 import com.burujiyaseer.passwordmanager.ui.util.Constants.EMPTY_STRING
-import com.burujiyaseer.passwordmanager.ui.util.utilLog
+import com.burujiyaseer.passwordmanager.ui.util.StandardWhileSubscribed
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -27,9 +27,9 @@ import java.util.UUID
 
 @HiltViewModel(assistedFactory = AddOrEditPasswordManagerViewModel.Factory::class)
 class AddOrEditPasswordManagerViewModel @AssistedInject constructor(
+    readPasswordManagerById: ReadPasswordManagerById,
     private val insertPasswordManager: InsertPasswordManager,
     private val encryptDecryptPassword: EncryptDecryptPassword,
-    private val readPasswordManagerById: ReadPasswordManagerById,
     private val deletePasswordManagerEntry: DeletePasswordManagerEntry,
     private val saveFavIconFromWebsiteUrl: SaveFavIconFromWebsiteUrl,
     @Assisted private val entryId: String?
@@ -40,10 +40,6 @@ class AddOrEditPasswordManagerViewModel @AssistedInject constructor(
         fun createKey(entryId: String?): AddOrEditPasswordManagerViewModel
     }
 
-//    private val passwordEntryIdFlow = flow { emit(entryId) }
-//        .stateIn(viewModelScope, SharingStarted.Lazily, entryId)
-//        savedStateHandle.getStateFlow<String?>(PASSWORD_ENTRY_ID_KEY, null)
-
     /**
      * this flow represents the state of the password entry in the moment of entry,
      * when adding a new password -> null, when editing - the currently saved state of the
@@ -53,7 +49,6 @@ class AddOrEditPasswordManagerViewModel @AssistedInject constructor(
         entryId
     ).map { passwordManagerModel ->
         entryId?.ifEmpty { null }.let { passwordEntryId ->
-            utilLog("readPassword: $passwordManagerModel, entryId: $passwordEntryId")
             AddEditPasswordManagerAction.FillUIFields(
                 uiPasswordModel =
                     passwordManagerModel?.run {
@@ -73,7 +68,7 @@ class AddOrEditPasswordManagerViewModel @AssistedInject constructor(
         }
     }.stateIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(5_000),
+        SharingStarted.StandardWhileSubscribed(),
         AddEditPasswordManagerAction.FillUIFields(UIPasswordModel(), R.string.add, false)
     )
     private val _uiActionFlow = MutableStateFlow<AddEditPasswordManagerAction?>(null)
@@ -129,7 +124,7 @@ class AddOrEditPasswordManagerViewModel @AssistedInject constructor(
         )
     }.stateIn(
         viewModelScope,
-        SharingStarted.Eagerly,
+        SharingStarted.StandardWhileSubscribed(),
         AddEditPasswordManagerAction.ToggleDoneBtnEnabled(false)
     )
 
@@ -148,11 +143,6 @@ class AddOrEditPasswordManagerViewModel @AssistedInject constructor(
             // await completion of all values
             val passwordFilename = deferredPasswordFilename.await()
             val favIconUrl = deferredFavIconUrl.await()
-            utilLog(
-                "uiPasswordModel: $uiPasswordModel \n" +
-                        "password: ${encryptDecryptPassword.decryptPassword(passwordFilename)} \n" +
-                        "favIconUrl: $favIconUrl"
-            )
             // save the entry into the database
             insertPasswordManager(
                 uiPasswordModel.run {

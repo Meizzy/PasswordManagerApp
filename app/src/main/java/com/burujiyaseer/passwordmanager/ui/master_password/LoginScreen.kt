@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -46,26 +45,25 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.burujiyaseer.passwordmanager.R
-import com.burujiyaseer.passwordmanager.domain.model.PasswordStrength
 import com.burujiyaseer.passwordmanager.ui.util.DefaultLambda
 import com.burujiyaseer.passwordmanager.ui.util.biometric_auth.BiometricAuthHelper
 import com.burujiyaseer.passwordmanager.ui.util.biometric_auth.BiometricResult
-import com.burujiyaseer.passwordmanager.ui.util.utilLog
+import com.burujiyaseer.passwordmanager.ui.util.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun LoginScreen(
     modifier: Modifier,
-    viewModel: MasterPasswordViewModel,
+    viewModel: MasterPasswordViewModel = hiltViewModel(),
     biometricAuthHelper: BiometricAuthHelper,
     goToNextScreen: DefaultLambda
 ) {
     val hasShownEdDialog by viewModel.hasShownEdDialog.collectAsStateWithLifecycle()
-    if (!hasShownEdDialog) {
-        EducationalAuthDialog { utilLog("ed dialog dismissed") }
-    }
     val activity = LocalActivity.current as FragmentActivity
+    val value: MasterPasswordUIAction by viewModel.masterPasswordUIState.collectAsStateWithLifecycle()
+
     Column(
         modifier
             .padding(16.dp)
@@ -73,11 +71,10 @@ fun LoginScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val value: MasterPasswordUIAction by viewModel.masterPasswordUIState.collectAsState()
-        var showButtonText: Boolean? = null
-        var passwordText by rememberSaveable {
-            mutableStateOf("")
+        if (!hasShownEdDialog) {
+            EducationalAuthDialog {  }
         }
+        var showButtonText by remember { mutableStateOf<Boolean?>(null) }
         var helperText by remember {
             mutableIntStateOf(R.string.required_helper_text)
         }
@@ -111,25 +108,10 @@ fun LoginScreen(
         Log.d("LoginScreen", "value def: $value")
         when (value) {
             is MasterPasswordUIAction.PasswordStrengthResult -> {
-                showButtonText =
-                    if ((value as MasterPasswordUIAction.PasswordStrengthResult).passwordStrength == PasswordStrength.WEAK) null else true
-                when ((value as MasterPasswordUIAction.PasswordStrengthResult).passwordStrength) {
-                    PasswordStrength.WEAK -> {
-                        helperText = R.string.weak_helper_text
-                        helperTextColor = Color.Red
-                    }
-
-                    PasswordStrength.OKAY -> {
-                        helperTextColor = colorResource(R.color.md_yellow_900)
-                        helperText = R.string.okay_helper_text
-                    }
-
-                    PasswordStrength.STRONG -> {
-                        val greenColor = colorResource(R.color.md_green_900)
-                        helperTextColor = greenColor
-                        helperText = R.string.strong_helper_text
-                    }
-                }
+                val passwordStrengthResult = value as MasterPasswordUIAction.PasswordStrengthResult
+                showButtonText = if (passwordStrengthResult.isWeak) null else true
+                helperText = passwordStrengthResult.helperTextRes
+                helperTextColor = colorResource(passwordStrengthResult.helperTextColor)
             }
 
             is MasterPasswordUIAction.ValidatePassword -> {
@@ -145,23 +127,7 @@ fun LoginScreen(
             }
 
             MasterPasswordUIAction.ShowBiometricsDialog -> {
-                val biometricResult by biometricAuthHelper.authenticate(activity)
-                    .collectAsState(null)
-//                    .also { biometricResult ->
-                utilLog("authenticate: result: $biometricResult")
-                when (biometricResult) {
-                    BiometricResult.CanceledBySystem,
-                    BiometricResult.CanceledByUser,
-                    BiometricResult.HardwareUnavailableOrDisabled,
-                    is BiometricResult.Failure -> {
-                        viewModel.onBiometricUnsuccessful()
-                    }
-
-                    BiometricResult.Retry -> viewModel.onRetryBiometric()
-
-                    is BiometricResult.Success -> viewModel.onBiometricSuccess()
-                    null -> Unit
-                }
+                ProcessBiometricsResult(value, biometricAuthHelper, activity, viewModel)
             }
         }
 
@@ -169,6 +135,9 @@ fun LoginScreen(
             modifier = Modifier.height(32.dp)
         )
 
+        var passwordText by rememberSaveable {
+            mutableStateOf("")
+        }
         OutlinedTextField(
             modifier = Modifier.padding(16.dp),
             value = passwordText,
@@ -228,6 +197,35 @@ fun LoginScreen(
             null -> Unit
         }
 
+    }
+}
+
+@Composable
+private fun ProcessBiometricsResult(
+    value: MasterPasswordUIAction,
+    biometricAuthHelper: BiometricAuthHelper,
+    activity: FragmentActivity,
+    viewModel: MasterPasswordViewModel
+) {
+    LaunchedEffect(value) {
+        biometricAuthHelper.authenticate(activity)
+            .collectLatest { biometricResult ->
+                when (biometricResult) {
+                    BiometricResult.CanceledBySystem,
+                    BiometricResult.CanceledByUser,
+                    BiometricResult.HardwareUnavailableOrDisabled,
+                    is BiometricResult.Failure -> {
+                        viewModel.onBiometricUnsuccessful()
+                    }
+
+                    BiometricResult.Retry -> viewModel.onRetryBiometric()
+
+                    is BiometricResult.Success -> {
+                        viewModel.onBiometricSuccess()
+                    }
+
+                }
+            }
     }
 }
 

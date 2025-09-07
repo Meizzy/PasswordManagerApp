@@ -1,6 +1,7 @@
 package com.burujiyaseer.passwordmanager.ui
 
-import LocalBackgroundTheme
+import com.burujiyaseer.passwordmanager.ui.ui.theme.LocalAppLifeCycle
+import com.burujiyaseer.passwordmanager.ui.ui.theme.LocalBackgroundTheme
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
@@ -65,9 +66,9 @@ class ComposeActivity : FragmentActivity() {
                 dynamicColor = false
             ) {
                 // A surface container using the 'background' color from the theme
-                AppBackground {
+                AppBackground(composeActivity = this, content = {
                     NavigationRoot()
-                }
+                })
             }
         }
     }
@@ -81,8 +82,9 @@ class ComposeActivity : FragmentActivity() {
  * @param content The background content.
  */
 @Composable
-fun AppBackground(
+private fun AppBackground(
     modifier: Modifier = Modifier,
+    composeActivity: ComposeActivity,
     content: @Composable () -> Unit,
 ) {
     val color = LocalBackgroundTheme.current.color
@@ -92,7 +94,7 @@ fun AppBackground(
         tonalElevation = if (tonalElevation == Dp.Unspecified) 0.dp else tonalElevation,
         modifier = modifier.fillMaxSize(),
     ) {
-        CompositionLocalProvider(LocalAbsoluteTonalElevation provides 0.dp) {
+        CompositionLocalProvider(LocalAbsoluteTonalElevation provides 0.dp, LocalAppLifeCycle provides composeActivity.lifecycle) {
             content()
         }
     }

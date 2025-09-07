@@ -2,6 +2,7 @@ package com.burujiyaseer.passwordmanager.ui.util.biometric_auth
 
 import android.app.KeyguardManager
 import android.content.Context
+import androidx.activity.ComponentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
@@ -11,6 +12,7 @@ import androidx.fragment.app.FragmentActivity
 import com.burujiyaseer.passwordmanager.R
 import com.burujiyaseer.passwordmanager.ui.util.utilLog
 import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
@@ -41,6 +43,7 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
         } else {
             channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
         }
+        awaitClose {  }
     }
 
     override fun authenticate(
@@ -64,6 +67,7 @@ class BiometricAuthHelperImpl : BiometricAuthHelper {
         } else {
             channel.trySend(BiometricResult.HardwareUnavailableOrDisabled)
         }
+        awaitClose {  }
     }
 
     private fun createPromptAuthenticationCallback(

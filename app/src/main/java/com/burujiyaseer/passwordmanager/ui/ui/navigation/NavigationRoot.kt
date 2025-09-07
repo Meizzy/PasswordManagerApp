@@ -1,10 +1,9 @@
 package com.burujiyaseer.passwordmanager.ui.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -17,6 +16,7 @@ import com.burujiyaseer.passwordmanager.ui.add_edit_password_manager.AddOrEditPa
 import com.burujiyaseer.passwordmanager.ui.master_password.LoginScreen
 import com.burujiyaseer.passwordmanager.ui.master_password.MasterPasswordViewModel
 import com.burujiyaseer.passwordmanager.ui.util.biometric_auth.BiometricAuthHelperImpl
+import com.burujiyaseer.passwordmanager.ui.util.collectAsStateWithLifecycle
 import com.burujiyaseer.passwordmanager.ui.view_password_manager.ViewPasswordsScreen
 import com.burujiyaseer.passwordmanager.ui.view_password_manager.ViewPasswordsViewModel
 import kotlinx.serialization.Serializable
@@ -54,6 +54,8 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
             Destination.ViewPasswordDestination -> {
                 NavEntry(key) {
                     val viewModel = hiltViewModel<ViewPasswordsViewModel>()
+                    val uiActionState by viewModel.passwordEntriesUIState.collectAsStateWithLifecycle()
+                    val uiSuggestionsState by viewModel.suggestionsUIState.collectAsStateWithLifecycle()
                     ViewPasswordsScreen(
                         modifier = modifier,
                         onSearchClick = viewModel::onQueryTextSubmitted,
@@ -62,8 +64,8 @@ fun NavigationRoot(modifier: Modifier = Modifier) {
                         onAddFabClick = { entryId ->
                             backStack.add(Destination.AddOrEditPasswordDestination(entryId))
                         },
-                        value = viewModel.passwordEntriesUIState.collectAsState().value,
-                        suggestions = viewModel.suggestionsUIState.collectAsState().value
+                        value = uiActionState,
+                        suggestions = uiSuggestionsState
                     )
                 }
             }
